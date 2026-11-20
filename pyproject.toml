@@ -1,4 +1,3 @@
-
 [project]
 name = "ai-python-studio"
 version = "0.1.0"
@@ -14,3 +13,6 @@ org = "com.aipythonstudio"
 
 [tool.flet.app]
 path = "src"
+
+[tool.flet.android]
+target_arch = ["arm64-v8a"]
