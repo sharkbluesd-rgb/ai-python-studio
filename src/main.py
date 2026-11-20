@@ -206,6 +206,19 @@ def main(page: ft.Page):
             set_status(str(exc) or "تعذر حذف الملف.", DANGER)
             page.update()
 
+    def duplicate_current_file(e) -> None:
+        nonlocal active_file
+        try:
+            save_current_file()
+            active_file = store.duplicate_file(active_project, active_file)
+            editor.value = store.read_file(active_project, active_file)
+            store.save_settings(active_project, active_file)
+            refresh_file_buttons()
+            set_status(f"تم نسخ الملف إلى {active_file}.", SUCCESS)
+        except WorkspaceError as exc:
+            set_status(str(exc), DANGER)
+        page.update()
+
     async def run_code(e) -> None:
         if run_state["running"]:
             return
@@ -334,6 +347,7 @@ def main(page: ft.Page):
                 ft.Row(
                     controls=[
                         ft.Text("ملفات المشروع", size=12, weight=ft.FontWeight.BOLD, color=MUTED),
+                        ft.Button(content="نسخ الملف", on_click=duplicate_current_file),
                         ft.Button(content="حذف الملف", on_click=delete_file),
                     ],
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,

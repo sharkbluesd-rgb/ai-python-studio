@@ -227,6 +227,23 @@ class WorkspaceStore:
         old_path.replace(new_path)
         return new_safe
 
+    def duplicate_file(self, project_id: str, file_name: str) -> str:
+        source_name = self.validate_file_name(file_name)
+        files = self.list_files(project_id)
+        if source_name not in files:
+            raise WorkspaceError("الملف الأصلي غير موجود.")
+        if len(files) >= MAX_FILES_PER_PROJECT:
+            raise WorkspaceError(f"وصلت إلى الحد الأقصى للملفات ({MAX_FILES_PER_PROJECT}).")
+        source = self._file_path(project_id, source_name)
+        stem = source.stem
+        candidate = f"{stem}_copy.py"
+        index = 2
+        while candidate in files:
+            candidate = f"{stem}_copy_{index}.py"
+            index += 1
+        self._atomic_write(self._file_path(project_id, candidate), source.read_text(encoding="utf-8"))
+        return candidate
+
     def load_settings(self) -> dict[str, str]:
         value = self._read_json(self.settings_path, {})
         if not isinstance(value, dict):

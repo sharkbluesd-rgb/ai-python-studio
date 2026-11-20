@@ -58,6 +58,14 @@ class WorkspaceStoreTests(unittest.TestCase):
         self.store.delete_file(self.project_id, "utils.py")
         self.assertNotIn("utils.py", self.store.list_files(self.project_id))
 
+    def test_duplicate_file_creates_unique_copy(self):
+        self.store.write_file(self.project_id, "main.py", "print('copy me')\\n")
+        first = self.store.duplicate_file(self.project_id, "main.py")
+        second = self.store.duplicate_file(self.project_id, "main.py")
+        self.assertEqual(first, "main_copy.py")
+        self.assertEqual(second, "main_copy_2.py")
+        self.assertEqual(self.store.read_file(self.project_id, first), "print('copy me')\\n")
+
     def test_reject_oversized_file(self):
         with self.assertRaises(WorkspaceError):
             self.store.write_file(self.project_id, "main.py", "x" * (512 * 1024 + 1))
