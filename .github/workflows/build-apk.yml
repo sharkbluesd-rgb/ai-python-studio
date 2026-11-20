@@ -1,4 +1,3 @@
-
 name: Build AI Python Studio APK
 
 on:
@@ -21,7 +20,7 @@ jobs:
 
       - name: Build Flet APK
         id: build
-        uses: flet-dev/flet-build-action@v1
+        uses: flet-dev/flet-build-action@74d5761ff4f3a249cad826697ac8b36b025f7052
         with:
           target: apk
           runner-python-version: "3.14"
