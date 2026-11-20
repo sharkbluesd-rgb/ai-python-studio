@@ -1,0 +1,12 @@
+
+[project]
+name = "ai-python-studio"
+version = "0.1.0"
+description = "AI-powered Python development studio for Android"
+requires-python = ">=3.10"
+dependencies = [
+    "flet",
+]
+
+[tool.flet]
+product = "AI Python Studio"
