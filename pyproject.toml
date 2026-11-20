@@ -1,10 +1,10 @@
 [project]
 name = "ai-python-studio"
-version = "0.1.0"
-description = "AI-powered Python development studio for Android"
+version = "0.2.0"
+description = "Persistent mobile Python development workspace built with Flet"
 requires-python = ">=3.10"
 dependencies = [
-    "flet",
+    "flet>=1.0,<2.0",
 ]
 
 [tool.flet]
