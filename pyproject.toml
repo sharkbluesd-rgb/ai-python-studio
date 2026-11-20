@@ -10,3 +10,7 @@ dependencies = [
 
 [tool.flet]
 product = "AI Python Studio"
+org = "com.aipythonstudio"
+
+[tool.flet.app]
+path = "src"
