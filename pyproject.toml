@@ -5,7 +5,6 @@ description = "Mobile Python development workspace with project tools and code e
 requires-python = ">=3.10"
 dependencies = [
     "flet==1.1.2",
-    "flet-cli==1.1.2",
     "flet-code-editor==1.1.2",
 ]
 
@@ -18,3 +17,7 @@ path = "src"
 
 [tool.flet.android]
 target_arch = ["arm64-v8a"]
+
+
+[dependency-groups]
+dev = ["flet-cli==1.1.2"]
