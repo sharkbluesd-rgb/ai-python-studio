@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 import sys
 
-from runner import execute_python
+from runner import check_python, execute_python
 
 
 class RunnerTests(unittest.TestCase):
@@ -14,7 +14,7 @@ class RunnerTests(unittest.TestCase):
         self.assertTrue(success)
         self.assertEqual(result.strip(), "hello runner")
 
-    def test_returns_traceback_for_invalid_code(self):
+    def test_returns_traceback_for_invalid_runtime_code(self):
         with tempfile.TemporaryDirectory() as directory:
             script = Path(directory) / "main.py"
             result, success = execute_python("raise ValueError('broken')", str(script))
@@ -30,11 +30,35 @@ class RunnerTests(unittest.TestCase):
         self.assertTrue(success)
         self.assertEqual(result.strip(), "42")
 
-    def test_restores_sys_path(self):
+    def test_imports_modules_from_explicit_project_root(self):
         with tempfile.TemporaryDirectory() as directory:
-            before = list(sys.path)
-            execute_python("pass", str(Path(directory) / "main.py"))
-            self.assertEqual(sys.path, before)
+            project = Path(directory)
+            (project / "utils.py").write_text("VALUE = 'root'\n", encoding="utf-8")
+            script = project / "src" / "main.py"
+            script.parent.mkdir()
+            result, success = execute_python(
+                "import utils\nprint(utils.VALUE)", str(script), str(project)
+            )
+        self.assertTrue(success)
+        self.assertEqual(result.strip(), "root")
+
+    def test_restores_sys_path_and_argv(self):
+        with tempfile.TemporaryDirectory() as directory:
+            before_path = list(sys.path)
+            before_argv = list(sys.argv)
+            execute_python("import sys\nsys.argv.append('changed')", str(Path(directory) / "main.py"))
+            self.assertEqual(sys.path, before_path)
+            self.assertEqual(sys.argv, before_argv)
+
+    def test_syntax_checker_accepts_valid_source(self):
+        valid, message = check_python("print('ok')", "main.py")
+        self.assertTrue(valid)
+        self.assertIn("لا توجد أخطاء", message)
+
+    def test_syntax_checker_reports_line_number(self):
+        valid, message = check_python("def broken(:\n    pass", "broken.py")
+        self.assertFalse(valid)
+        self.assertIn("السطر 1", message)
 
 
 if __name__ == "__main__":

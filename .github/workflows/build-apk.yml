@@ -5,44 +5,52 @@ on:
   push:
     branches:
       - main
+      - "feature/**"
 
 permissions:
   contents: read
 
 jobs:
-  build:
-    name: Build Android APK
+  test-and-build:
+    name: Test and build Android APK
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout source
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
-      - name: Set up Python for tests
-        uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+          cache: "pip"
 
-      - name: Run Python tests
+      - name: Install project dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e .
-          PYTHONPATH=src python -m unittest discover -s tests -v
+
+      - name: Compile Python sources
+        run: python -m compileall -q src tests
+
+      - name: Run unit tests
+        env:
+          PYTHONPATH: src
+        run: python -m unittest discover -s tests -v
 
       - name: Build Flet APK
         id: build
-        uses: flet-dev/flet-build-action@74d5761ff4f3a249cad826697ac8b36b025f7052
+        uses: flet-dev/flet-build-action@v1
         with:
           target: apk
           runner-python-version: "3.12"
           bundled-python-version: "3.12"
+          build-version: "1.1.0"
           build-number: ${{ github.run_number }}
 
       - name: Upload APK archive
         uses: actions/upload-artifact@v7
         with:
-          name: ai-python-studio-apk
           path: ${{ steps.build.outputs.archive-path }}
           archive: false
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 14
