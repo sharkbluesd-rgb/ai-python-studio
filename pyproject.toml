@@ -5,6 +5,7 @@ description = "Persistent mobile Python development workspace built with Flet"
 requires-python = ">=3.10"
 dependencies = [
     "flet>=1.0,<2.0",
+    "flet-webview==1.1.2",
 ]
 
 [tool.flet]
