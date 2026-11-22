@@ -137,6 +137,7 @@ def main(page: ft.Page) -> None:
         color="white", disabled=True,
     )
     run_state = {"running": False, "control": None}
+    autosave_state = {"revision": 0}
     file_picker = ft.FilePicker()
     page.services.append(file_picker)
 
@@ -161,6 +162,8 @@ def main(page: ft.Page) -> None:
         return active_project
 
     def save_current_file(show_status: bool = False) -> None:
+        # Invalidate delayed saves scheduled for an earlier editor state.
+        autosave_state["revision"] += 1
         store.write_file(active_project, active_file, current_code())
         store.save_settings(active_project, active_file)
         if show_status:
@@ -317,14 +320,29 @@ def main(page: ft.Page) -> None:
             set_status(str(exc) or "تعذر فتح المشروع.", DANGER)
             page.update()
 
-    def on_editor_change(e: ft.Event[fce.CodeEditor]) -> None:
+    async def save_after_typing(revision: int) -> None:
+        # Rapid typing is coalesced into one disk write after a short pause.
+        await asyncio.sleep(0.7)
+        if revision != autosave_state["revision"]:
+            return
         try:
-            if e.data is not None:
-                editor.value = e.data
-            save_current_file()
-            set_status("حفظ تلقائي · التغييرات محفوظة على الجهاز", SUCCESS)
+            store.write_file(active_project, active_file, current_code())
+            store.save_settings(active_project, active_file)
+            if revision == autosave_state["revision"]:
+                set_status("تم الحفظ تلقائياً · كل التغييرات محفوظة", SUCCESS)
+                page.update()
         except WorkspaceError as exc:
-            set_status(str(exc), DANGER)
+            if revision == autosave_state["revision"]:
+                set_status(f"فشل الحفظ التلقائي: {exc}", DANGER)
+                page.update()
+
+    def on_editor_change(e: ft.Event[fce.CodeEditor]) -> None:
+        if e.data is not None:
+            editor.value = e.data
+        autosave_state["revision"] += 1
+        revision = autosave_state["revision"]
+        set_status("تغييرات غير محفوظة · جارٍ الحفظ…", "#E4C27A")
+        page.run_task(save_after_typing, revision)
 
     def create_project(e) -> None:
         nonlocal active_project, active_file
