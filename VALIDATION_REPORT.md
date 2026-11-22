@@ -46,3 +46,24 @@ A green GitHub Actions build and an install/open test on the Android device are 
 ## Safety note
 
 The runner uses `exec()` in the app process. This project is not suitable for safely executing untrusted code. It has no reliable hard timeout or memory sandbox.
+
+
+## GitHub cloud integration security review — 2026-11-22
+
+The previous successful workflow run (45061148221) compiled the source, passed 96 unit tests, built the Flet Android APK, and uploaded flet-apk.zip (25,796,822 bytes). That run validates its recorded commit only; it predates the additional hardening changes currently being tested.
+
+Additional review findings and corrections:
+- OAuth device-code and token requests use URL-encoded form bodies as specified by GitHub.
+- Device verification URLs are restricted to the official GitHub device page; device polling observes the server-provided interval.
+- Repository owner/name and Git branch inputs are validated before being added to API paths.
+- ZIP upload checks declared member sizes before reading, caps each member at 512 KiB, rejects environment files, symbolic links, special files, encrypted entries, duplicate paths, traversal, and oversized projects.
+- Artifact redirects are followed without forwarding the OAuth bearer token to the redirected storage host.
+- APK download is restricted to completed successful runs and the expected flet-apk.zip artifact; the nested archive is unwrapped and the APK must contain AndroidManifest.xml.
+- The GitHub session is disconnected before project script execution, test execution, and third-party package installation because the current Python runner is not isolated.
+
+Still required before calling this release fully verified:
+- The post-review commit must pass CI tests, lint and security audits, and a fresh APK build.
+- GitHub OAuth must be tested with a real OAuth App and user account.
+- Upload, workflow dispatch, log retrieval, and APK saving must be exercised against a test repository.
+- The APK must be installed and launched on a physical Android device.
+- The intentionally unsandboxed local Python runner remains a known limitation.

@@ -1,14 +1,12 @@
 import io
 import json
 import stat
-import time
 import unittest
 import urllib.parse
 import zipfile
 from unittest.mock import patch
 
 from github_cloud import (
-    DeviceAuthorization,
     GitHubClient,
     GitHubError,
     _oauth_request,

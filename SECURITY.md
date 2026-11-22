@@ -13,3 +13,14 @@ ZIP import validates relative paths, rejects traversal and symbolic links, limit
 ## Reporting
 
 Report security issues privately to the repository maintainer. Do not publish secrets, API keys, signing keys, or personal project archives in public issues.
+
+
+## GitHub integration
+
+- Authentication uses GitHub OAuth Device Flow. Device Flow must be enabled in the OAuth App settings.
+- The app requests repo and workflow scopes. These are broad scopes that can grant access to private repositories and workflow files; users must review and approve this access in GitHub.
+- OAuth tokens are not written to project files, settings, logs, or environment variables. The client holds a token reference in memory while connected. Python cannot guarantee secure zeroization of immutable strings.
+- Because project scripts and package build backends execute in the same application process or under the same app identity, the GitHub session is automatically disconnected before executing scripts, tests, and package installations. This reduces exposure but does not create a sandbox.
+- Never run untrusted scripts or install untrusted packages. Do not treat session disconnection or cooperative timeouts as a security boundary.
+- Project uploads reject traversal, links and special files, environment files, duplicate paths, encrypted entries, oversized files, and oversized projects. Artifact redirects are followed without forwarding the OAuth Authorization header to the storage host.
+- APK installation has not been tested on every Android device. Verify artifacts on a trusted device before distribution.
