@@ -1675,6 +1675,10 @@ def main(page: ft.Page) -> None:
             controls=[output_panel],
             spacing=12, scroll=ft.ScrollMode.AUTO, expand=True,
         ),
+        "github": ft.Column(
+            controls=[github_panel],
+            spacing=12, scroll=ft.ScrollMode.AUTO, expand=True,
+        ),
     }
 
     screen_host = ft.Container(content=screens["editor"], expand=True, padding=12)
