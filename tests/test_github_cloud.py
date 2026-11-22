@@ -1,5 +1,4 @@
 import io
-import json
 import stat
 import unittest
 import urllib.parse
