@@ -17,7 +17,7 @@ from file_tree import build_tree_entries
 from project_tools import analyze_project as inspect_project, format_analysis_report
 from workspace import MAX_ARCHIVE_BYTES, WorkspaceError, WorkspaceStore
 from package_manager import PackageManagerError, parse_requirements, install_packages, list_installed
-from github_cloud import GitHubClient, GitHubError
+from github_cloud import GitHubClient, GitHubError, select_dispatched_run
 
 
 APP_BG = "#080D16"
@@ -142,7 +142,7 @@ def main(page: ft.Page) -> None:
     file_picker = ft.FilePicker()
     page.services.append(file_picker)
     # GitHub credentials are deliberately session-only and never written to disk.
-    github_state = {"client": None, "device": None, "client_id": "", "owner": "", "repo": "", "branch": "main", "run_id": None}
+    github_state = {"client": None, "device": None, "client_id": "", "owner": "", "repo": "", "branch": "main", "run_id": None, "pending_run_ids": None}
 
     def set_status(message: str, color: str = MUTED) -> None:
         status_text.value = message
@@ -1191,7 +1191,7 @@ def main(page: ft.Page) -> None:
         client = github_state.get("client")
         if client:
             client.clear()
-        github_state.update({"client": None, "device": None, "run_id": None})
+        github_state.update({"client": None, "device": None, "run_id": None, "pending_run_ids": None})
         github_status.value = "تم قطع الاتصال ومسح الرمز من ذاكرة التطبيق."
         github_status.color = MUTED
         github_device_info.value = "لم يتم ربط GitHub."
@@ -1309,6 +1309,13 @@ def main(page: ft.Page) -> None:
             issues = validate_flet_project(store._project_dir(active_project))
             if issues:
                 raise GitHubError("المشروع غير جاهز لبناء Android:\n• " + "\n• ".join(issues))
+            previous_runs = await asyncio.to_thread(
+                client.list_workflow_runs, owner, repo_name, branch, 20
+            )
+            github_state["pending_run_ids"] = {
+                int(item["id"]) for item in previous_runs if item.get("id") is not None
+            }
+            github_state["run_id"] = None
             github_status.value = "جارٍ تشغيل GitHub Actions..."
             github_status.color = ACCENT
             page.update()
@@ -1332,12 +1339,29 @@ def main(page: ft.Page) -> None:
             return
         try:
             owner, repo_name, branch = parse_github_repository()
-            runs = await asyncio.to_thread(client.list_workflow_runs, owner, repo_name, branch, 5)
-            if not runs:
+            runs = await asyncio.to_thread(client.list_workflow_runs, owner, repo_name, branch, 20)
+            pending_ids = github_state.get("pending_run_ids")
+            if pending_ids is not None:
+                run = select_dispatched_run(runs, pending_ids)
+                if run is None:
+                    github_state["run_id"] = None
+                    github_status.value = (
+                        "أُرسل طلب البناء، لكن GitHub لم ينشئ عملية جديدة بعد. "
+                        "أعد التحديث بعد لحظات؛ لن نعرض بناءً سابقاً بدلاً من هذا الطلب."
+                    )
+                    github_status.color = ACCENT
+                    output_text.value = github_status.value
+                    output_text.color = MUTED
+                    show_screen("terminal")
+                    page.update()
+                    return
+                github_state["pending_run_ids"] = None
+            else:
+                run = runs[0] if runs else None
+            if run is None:
                 github_status.value = "لم يظهر بناء بعد. تأكد من وجود workflow باسم build-apk.yml."
                 github_status.color = MUTED
             else:
-                run = runs[0]
                 github_state["run_id"] = run["id"]
                 jobs = await asyncio.to_thread(client.list_run_jobs, owner, repo_name, run["id"])
                 job_lines = []

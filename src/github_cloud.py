@@ -124,6 +124,18 @@ def _potential_secret(content: bytes) -> str | None:
     return None
 
 
+def select_dispatched_run(runs: list[dict], baseline_run_ids: set[int]) -> dict | None:
+    """Return only a newly-dispatched workflow run, never an older successful run."""
+    for run in runs:
+        try:
+            run_id = int(run.get("id", 0))
+        except (TypeError, ValueError):
+            continue
+        if run_id not in baseline_run_ids and run.get("event") == "workflow_dispatch":
+            return run
+    return None
+
+
 def validate_repository(owner: str, repo: str) -> tuple[str, str]:
     owner = (owner or "").strip()
     repo = (repo or "").strip()
