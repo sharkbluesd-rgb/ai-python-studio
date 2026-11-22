@@ -237,6 +237,8 @@ class WorkspaceStore:
             raise WorkspaceError("القالب لا يحتوي على ملفات.")
         if len(files) > MAX_FILES_PER_PROJECT:
             raise WorkspaceError("القالب يحتوي على ملفات أكثر من الحد المسموح.")
+        if "main.py" not in files and len(files) >= MAX_FILES_PER_PROJECT:
+            raise WorkspaceError("إضافة الملف الافتراضي ستتجاوز الحد الأقصى لملفات المشروع.")
         project_id = self.create_project(display_name)
         project_dir = self._project_dir(project_id)
         try:
@@ -604,6 +606,8 @@ class WorkspaceStore:
                 raise WorkspaceError("لم أجد ملفات مدعومة داخل ZIP.")
             if len(prepared) > MAX_FILES_PER_PROJECT:
                 raise WorkspaceError(f"الأرشيف يحتوي ملفات أكثر من الحد ({MAX_FILES_PER_PROJECT}).")
+            if "main.py" not in {name for name, _ in prepared} and len(prepared) >= MAX_FILES_PER_PROJECT:
+                raise WorkspaceError("إضافة الملف الافتراضي ستتجاوز الحد الأقصى لملفات المشروع.")
 
             project_id = self.create_project(clean_name)
             project_dir = self._project_dir(project_id)

@@ -20,6 +20,8 @@ from pathlib import Path
 
 
 _RUN_LOCK = threading.RLock()
+MAX_CAPTURE_CHARS = 256_000
+_OUTPUT_TRUNCATED_MESSAGE = "\n[تم اختصار الإخراج بعد بلوغ الحد الآمن]"
 
 
 class ExecutionCancelled(Exception):
@@ -56,18 +58,44 @@ class ExecutionControl:
 class _OutputCapture(io.StringIO):
     """Capture output and optionally forward each written chunk."""
 
-    def __init__(self, callback: Callable[[str], None] | None = None):
+    def __init__(
+        self,
+        callback: Callable[[str], None] | None = None,
+        max_chars: int = MAX_CAPTURE_CHARS,
+    ):
         super().__init__()
+        if max_chars < 1:
+            raise ValueError("max_chars must be positive")
         self.callback = callback
+        self.max_chars = max_chars
+        self._captured_chars = 0
+        self._truncated = False
 
     def write(self, value: str) -> int:
-        written = super().write(value)
-        if value and self.callback is not None:
-            try:
-                self.callback(value)
-            except Exception:
-                pass
-        return written
+        if not isinstance(value, str):
+            return super().write(value)
+
+        available = max(0, self.max_chars - self._captured_chars)
+        captured = value[:available]
+        if captured:
+            super().write(captured)
+            self._captured_chars += len(captured)
+            if self.callback is not None:
+                try:
+                    self.callback(captured)
+                except Exception:
+                    pass
+
+        if len(captured) < len(value) and not self._truncated:
+            self._truncated = True
+            super().write(_OUTPUT_TRUNCATED_MESSAGE)
+            if self.callback is not None:
+                try:
+                    self.callback(_OUTPUT_TRUNCATED_MESSAGE)
+                except Exception:
+                    pass
+
+        return len(value)
 
 
 

@@ -4,7 +4,7 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from workspace import WorkspaceError, WorkspaceStore
+from workspace import MAX_FILES_PER_PROJECT, WorkspaceError, WorkspaceStore
 from templates import TEMPLATES
 
 
@@ -31,6 +31,14 @@ class WorkspaceStoreTests(unittest.TestCase):
         new_id = self.store.create_project("Demo Project")
         self.assertNotEqual(new_id, self.project_id)
         self.assertEqual(self.store.list_files(new_id), ["main.py"])
+
+    def test_template_file_limit_counts_generated_default_file(self):
+        files = {
+            f"module_{index}.py": "pass\n"
+            for index in range(MAX_FILES_PER_PROJECT)
+        }
+        with self.assertRaises(WorkspaceError):
+            self.store.create_project_from_template("Too Many Files", files)
 
     def test_duplicate_project_name_gets_unique_id(self):
         first = self.store.create_project("Practice")
@@ -215,6 +223,14 @@ class WorkspaceStoreTests(unittest.TestCase):
         self.assertIn("assets/sample.png", self.store.list_assets(imported_id))
         imported_image = self.store._project_dir(imported_id) / "assets" / "sample.png"
         self.assertEqual(imported_image.read_bytes(), b"fake-png-content")
+
+    def test_zip_import_file_limit_counts_generated_default_file(self):
+        stream = io.BytesIO()
+        with zipfile.ZipFile(stream, "w") as archive:
+            for index in range(MAX_FILES_PER_PROJECT):
+                archive.writestr(f"module_{index}.py", "pass\n")
+        with self.assertRaises(WorkspaceError):
+            self.store.import_project_archive(stream.getvalue(), "Too Many Files")
 
     def test_import_github_style_zip_with_one_wrapper_folder(self):
         stream = io.BytesIO()

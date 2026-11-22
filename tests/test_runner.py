@@ -4,7 +4,12 @@ import unittest
 from pathlib import Path
 import sys
 
-from runner import ExecutionControl, check_python, execute_python
+from runner import (
+    MAX_CAPTURE_CHARS,
+    ExecutionControl,
+    check_python,
+    execute_python,
+)
 
 
 class RunnerTests(unittest.TestCase):
@@ -113,6 +118,22 @@ class RunnerTests(unittest.TestCase):
             result, success = execute_python("print('hello runner')", str(script))
         self.assertTrue(success)
         self.assertEqual(result.strip(), "hello runner")
+
+    def test_output_capture_is_bounded(self):
+        chunks = []
+        with tempfile.TemporaryDirectory() as directory:
+            result, success = execute_python(
+                f"print('x' * {MAX_CAPTURE_CHARS + 100})",
+                str(Path(directory) / "large_output.py"),
+                output_callback=chunks.append,
+            )
+        self.assertTrue(success)
+        self.assertIn("تم اختصار الإخراج", result)
+        self.assertIn("تم اختصار الإخراج", "".join(chunks))
+        self.assertLessEqual(
+            len("".join(chunks)),
+            MAX_CAPTURE_CHARS + len("\n[تم اختصار الإخراج بعد بلوغ الحد الآمن]"),
+        )
 
     def test_returns_traceback_for_invalid_runtime_code(self):
         with tempfile.TemporaryDirectory() as directory:
