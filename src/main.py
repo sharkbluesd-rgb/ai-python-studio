@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from pathlib import Path, PurePosixPath
 
 import flet as ft
@@ -520,24 +521,71 @@ def main(page: ft.Page) -> None:
 
         run_state["running"] = True
         run_button.disabled = True
-        set_status("جارٍ تنفيذ الكود... (شغّل الأكواد التي تثق بها فقط)", ACCENT)
-        output_text.value = "يتم تنفيذ البرنامج..."
-        output_text.color = MUTED
+        set_status("جارٍ التنفيذ — ستظهر المخرجات مباشرة.", ACCENT)
+        output_text.value = ""
+        output_text.color = TEXT
         page.update()
 
         code_snapshot = current_code()
         file_path = str(store.root / "projects" / active_project / active_file)
         project_path = str(store.root / "projects" / active_project)
+        output_queue = asyncio.Queue()
+        loop = asyncio.get_running_loop()
+        streamed_text = ""
+        was_truncated = False
+        started_at = time.monotonic()
+
+        def emit_output(chunk: str) -> None:
+            if chunk:
+                loop.call_soon_threadsafe(output_queue.put_nowait, chunk)
+
+        def append_output(chunk: str) -> None:
+            nonlocal streamed_text, was_truncated
+            streamed_text += chunk
+            if len(streamed_text) > OUTPUT_LIMIT:
+                streamed_text = streamed_text[-OUTPUT_LIMIT:]
+                was_truncated = True
+            output_text.value = streamed_text
+            if was_truncated:
+                output_text.value += "\\n\\n[تم اختصار الإخراج لطوله الكبير]"
+            page.update()
+
         try:
-            result, succeeded = await asyncio.to_thread(
-                execute_python, code_snapshot, file_path, project_path
+            worker = asyncio.create_task(
+                asyncio.to_thread(
+                    execute_python,
+                    code_snapshot,
+                    file_path,
+                    project_path,
+                    emit_output,
+                )
             )
-            output_text.value = result[:OUTPUT_LIMIT]
-            if len(result) > OUTPUT_LIMIT:
-                output_text.value += "\n\n[تم اختصار الإخراج لطوله الكبير]"
+
+            while not worker.done():
+                try:
+                    chunk = await asyncio.wait_for(
+                        output_queue.get(), timeout=0.1
+                    )
+                    append_output(chunk)
+                except asyncio.TimeoutError:
+                    pass
+
+            result, succeeded = await worker
+
+            while not output_queue.empty():
+                append_output(output_queue.get_nowait())
+
+            if not streamed_text:
+                output_text.value = result[:OUTPUT_LIMIT]
+                if len(result) > OUTPUT_LIMIT:
+                    output_text.value += "\\n\\n[تم اختصار الإخراج لطوله الكبير]"
             output_text.color = SUCCESS if succeeded else DANGER
+
+            elapsed = time.monotonic() - started_at
             set_status(
-                "اكتمل التنفيذ." if succeeded else "انتهى التنفيذ مع وجود خطأ.",
+                f"اكتمل التنفيذ خلال {elapsed:.2f} ثانية."
+                if succeeded
+                else f"انتهى التنفيذ بخطأ بعد {elapsed:.2f} ثانية.",
                 SUCCESS if succeeded else DANGER,
             )
         except Exception as exc:

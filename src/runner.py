@@ -12,10 +12,30 @@ import io
 import sys
 import threading
 import traceback
+from collections.abc import Callable
 from pathlib import Path
 
 
 _RUN_LOCK = threading.RLock()
+
+
+class _OutputCapture(io.StringIO):
+    """Capture output and optionally forward each written chunk."""
+
+    def __init__(self, callback: Callable[[str], None] | None = None):
+        super().__init__()
+        self.callback = callback
+
+    def write(self, value: str) -> int:
+        written = super().write(value)
+        if value and self.callback is not None:
+            try:
+                self.callback(value)
+            except Exception:
+                pass
+        return written
+
+
 
 
 def check_python(code: str, file_path: str = "main.py") -> tuple[bool, str]:
@@ -36,6 +56,7 @@ def execute_python(
     code: str,
     file_path: str,
     project_root: str | None = None,
+    output_callback: Callable[[str], None] | None = None,
 ) -> tuple[str, bool]:
     """Run a trusted script and return ``(captured_output, succeeded)``.
 
@@ -44,10 +65,12 @@ def execute_python(
     """
     valid, syntax_message = check_python(code, file_path)
     if not valid:
+        if output_callback is not None:
+            output_callback(syntax_message + "\\n")
         return syntax_message, False
 
-    stdout = io.StringIO()
-    stderr = io.StringIO()
+    stdout = _OutputCapture(output_callback)
+    stderr = _OutputCapture(output_callback)
     script_path = Path(file_path).expanduser().resolve()
     script_dir = str(script_path.parent)
     project_dir = str(Path(project_root).expanduser().resolve()) if project_root else script_dir
@@ -78,6 +101,11 @@ def execute_python(
             output = stdout.getvalue()
             error_output = stderr.getvalue()
             details = traceback.format_exc()
+            if output_callback is not None:
+                try:
+                    output_callback(details)
+                except Exception:
+                    pass
             combined = output
             if error_output:
                 combined += ("\n" if combined else "") + error_output

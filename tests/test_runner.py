@@ -63,3 +63,31 @@ class RunnerTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class StreamingRunnerTests(unittest.TestCase):
+    def test_streams_printed_output(self):
+        chunks = []
+        with tempfile.TemporaryDirectory() as directory:
+            script = Path(directory) / "main.py"
+            result, success = execute_python(
+                "print('live output')",
+                str(script),
+                output_callback=chunks.append,
+            )
+        self.assertTrue(success)
+        self.assertIn("live output", "".join(chunks))
+        self.assertIn("live output", result)
+
+    def test_streams_runtime_traceback(self):
+        chunks = []
+        with tempfile.TemporaryDirectory() as directory:
+            script = Path(directory) / "main.py"
+            result, success = execute_python(
+                "raise ValueError('streamed error')",
+                str(script),
+                output_callback=chunks.append,
+            )
+        self.assertFalse(success)
+        self.assertIn("ValueError: streamed error", "".join(chunks))
+        self.assertIn("ValueError: streamed error", result)
