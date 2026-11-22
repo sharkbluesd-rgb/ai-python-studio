@@ -17,7 +17,7 @@ from file_tree import build_tree_entries
 from project_tools import analyze_project as inspect_project, format_analysis_report
 from workspace import MAX_ARCHIVE_BYTES, WorkspaceError, WorkspaceStore
 from package_manager import PackageManagerError, parse_requirements, install_packages, list_installed
-from github_cloud import DeviceAuthorization, GitHubClient, GitHubError
+from github_cloud import GitHubClient, GitHubError
 
 
 APP_BG = "#080D16"
@@ -1078,7 +1078,7 @@ def main(page: ft.Page) -> None:
     android_config_status = ft.Text("هذه الإعدادات تطبق على مشاريع Flet Android التي تحتوي pyproject.toml.", size=11, color=MUTED)
 
     def save_android_configuration(e) -> None:
-        from flet_project import configure_flet_project, validate_flet_project
+        from flet_project import configure_flet_project
         try:
             save_current_file()
             project_path = store._project_dir(active_project)

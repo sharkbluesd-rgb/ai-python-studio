@@ -421,7 +421,6 @@ class WorkspaceStore:
             raise WorkspaceError("الملف الأصلي غير موجود.")
         if len(files) >= MAX_FILES_PER_PROJECT:
             raise WorkspaceError(f"وصلت إلى الحد الأقصى للملفات ({MAX_FILES_PER_PROJECT}).")
-        source = self._project_file_path(project_id, source_name)
         parent = PurePosixPath(source_name).parent
         stem = Path(source_name).stem
         suffix = Path(source_name).suffix
