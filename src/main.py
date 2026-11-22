@@ -148,6 +148,23 @@ def main(page: ft.Page) -> None:
         status_text.value = message
         status_text.color = color
 
+    def disconnect_github_before_untrusted_code(action: str) -> None:
+        """Drop the OAuth session before executing code or installing third-party packages."""
+        client = github_state.get("client")
+        if client is not None:
+            client.clear()
+        if client is not None or github_state.get("device") is not None:
+            github_state.update({
+                "client": None, "device": None, "client_id": "",
+                "run_id": None,
+            })
+            github_status.value = (
+                f"تم قطع اتصال GitHub تلقائياً قبل {action} لتقليل احتمال وصول "
+                "الكود المنفذ إلى رمز OAuth. سجّل الدخول مجدداً عند الحاجة."
+            )
+            github_status.color = MUTED
+            github_device_info.value = "انتهت جلسة GitHub؛ يلزم تسجيل الدخول مجدداً."
+
     def current_code() -> str:
         return editor.value or ""
 
@@ -554,6 +571,7 @@ def main(page: ft.Page) -> None:
             page.update()
             return
 
+        disconnect_github_before_untrusted_code("تشغيل اختبارات المشروع")
         project_path = str(store._project_dir(active_project))
         run_state["running"] = True
         run_state["control"] = ExecutionControl(timeout_seconds=180)
@@ -612,6 +630,7 @@ def main(page: ft.Page) -> None:
             page.update()
             return
 
+        disconnect_github_before_untrusted_code("تشغيل كود Python")
         run_state["running"] = True
         run_state["control"] = ExecutionControl(timeout_seconds=60)
         run_button.disabled = True
@@ -829,6 +848,7 @@ def main(page: ft.Page) -> None:
             packages = parse_requirements(package)
             if len(packages) != 1:
                 raise PackageManagerError("أدخل اسم مكتبة واحدة فقط.")
+            disconnect_github_before_untrusted_code("تثبيت مكتبة خارجية")
             package_state["busy"] = True
             set_status("جارٍ تثبيت المكتبة...", ACCENT)
             output_text.value = "يتم تثبيت المكتبة عبر Python الحالي..."
@@ -857,6 +877,7 @@ def main(page: ft.Page) -> None:
             packages = parse_requirements(requirements)
             if not packages:
                 raise PackageManagerError("ملف requirements.txt فارغ.")
+            disconnect_github_before_untrusted_code("تثبيت اعتماديات المشروع")
             package_state["busy"] = True
             set_status(f"جارٍ تثبيت {len(packages)} مكتبة...", ACCENT)
             output_text.value = "يتم تثبيت اعتماديات المشروع..."
@@ -1125,8 +1146,8 @@ def main(page: ft.Page) -> None:
             github_state["device"] = auth
             github_state["client_id"] = client_id
             github_device_info.value = (
-                f"افتح: {auth.verification_uri}\\n"
-                f"أدخل الرمز: {auth.user_code}\\n"
+                f"افتح: {auth.verification_uri}\n"
+                f"أدخل الرمز: {auth.user_code}\n"
                 "بعد الموافقة اضغط «التحقق من تسجيل الدخول»."
             )
             github_status.value = "في انتظار موافقتك من صفحة GitHub."
@@ -1176,7 +1197,7 @@ def main(page: ft.Page) -> None:
         github_device_info.value = "لم يتم ربط GitHub."
         page.update()
 
-    async def choose_github_repository(full_name: str, default_branch: str) -> None:
+    def choose_github_repository(full_name: str, default_branch: str) -> None:
         github_repository.value = full_name
         github_branch.value = default_branch or "main"
         github_status.value = f"تم اختيار المستودع {full_name}."
@@ -1331,9 +1352,9 @@ def main(page: ft.Page) -> None:
                         except GitHubError as log_error:
                             job_lines.append(f"تعذر تحميل السجل: {log_error}")
                 output_text.value = (
-                    f"GitHub Actions · Run #{run.get('run_number')}\\n"
-                    f"الحالة: {run.get('status')} · النتيجة: {run.get('conclusion') or 'لم تنته'}\\n"
-                    f"الرابط: {run.get('html_url')}\\n\\n" + "\\n".join(job_lines)
+                    f"GitHub Actions · Run #{run.get('run_number')}\n"
+                    f"الحالة: {run.get('status')} · النتيجة: {run.get('conclusion') or 'لم تنته'}\n"
+                    f"الرابط: {run.get('html_url')}\n\n" + "\n".join(job_lines)
                 )
                 output_text.color = SUCCESS if run.get("conclusion") == "success" else (DANGER if run.get("conclusion") == "failure" else TEXT)
                 github_status.value = f"آخر بناء: {run.get('status')} / {run.get('conclusion') or 'قيد التنفيذ'}"
@@ -1414,8 +1435,9 @@ def main(page: ft.Page) -> None:
             ], wrap=True, spacing=7),
             github_status,
             ft.Text(
-                "الأمان: Device Flow بنطاق repo وworkflow. الرمز مؤقت في الذاكرة ولا يُكتب إلى التخزين. "
-                "شغّل مشاريعك الموثوقة فقط؛ لا يمكن اعتبار تنفيذ كود المستخدم معزولاً أمنياً.",
+                "الصلاحيات المطلوبة: repo وworkflow للوصول إلى المستودعات الخاصة وملفات Actions. "
+                "الرمز لا يُحفظ في ملفات التطبيق. يفصل التطبيق جلسة GitHub تلقائياً قبل تشغيل كود Python "
+                "أو تثبيت مكتبات، لأن تنفيذ الكود داخل العملية نفسها ليس بيئة معزولة.",
                 size=10, color="#DDBB78",
             ),
         ], spacing=9)
