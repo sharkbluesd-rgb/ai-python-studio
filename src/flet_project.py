@@ -1,6 +1,7 @@
 """Validation and safe configuration helpers for Flet Android projects."""
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -29,7 +30,7 @@ def _replace_key(text: str, section: str, key: str, value: str) -> str:
     if not match:
         raise ValueError(f"ملف pyproject.toml لا يحتوي القسم [{section}].")
     body = match.group(2)
-    line = f'{key} = "{value}"'
+    line = f"{key} = {json.dumps(value, ensure_ascii=False)}"
     key_pattern = re.compile(rf"(?m)^\s*{re.escape(key)}\s*=.*$")
     if key_pattern.search(body):
         body = key_pattern.sub(line, body, count=1)
@@ -75,7 +76,7 @@ def configure_flet_project(
             content,
         )
         content = re.sub(
-            r"(?m)^(\s*build-number:\s*)['\"][^'\"]*['\"]\s*$",
+            r"(?m)^(\s*build-number:\s*).*$",
             lambda m: m.group(1) + build_number,
             content,
         )

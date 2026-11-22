@@ -25,10 +25,11 @@ class FletProjectConfigurationTests(unittest.TestCase):
         return root
 
     def test_validates_android_application_id(self):
+        self.assertEqual(validate_application_id("com.example"), "com.example")
         self.assertEqual(validate_application_id("com.example.my_app"), "com.example.my_app")
 
     def test_rejects_invalid_application_ids(self):
-        for value in ("Com.example.app", "com..app", "com.example", "com.example-app", "com.1app"):
+        for value in ("Com.example.app", "com..app", "com.example-app", "com.1app"):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 validate_application_id(value)
 
