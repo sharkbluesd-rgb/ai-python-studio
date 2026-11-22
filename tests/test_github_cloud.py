@@ -156,6 +156,20 @@ class GitHubCloudTests(unittest.TestCase):
             with self.assertRaisesRegex(GitHubError, "انتظر"):
                 GitHubClient.poll_device_authorization("client-id", auth)
 
+    def test_get_job_logs_rejects_oversized_uncompressed_member(self):
+        archive = self.make_zip([("logs/step.txt", "x" * (5 * 1024 * 1024 + 1))])
+        with patch("github_cloud._download_redirect_safely", return_value=archive):
+            with self.assertRaisesRegex(GitHubError, "يتجاوز حد 5 MB"):
+                self.client.get_job_logs("owner", "repo", 123)
+
+    def test_get_job_logs_rejects_excessive_file_count(self):
+        archive = self.make_zip([
+            (f"logs/{index}.txt", "ok") for index in range(101)
+        ])
+        with patch("github_cloud._download_redirect_safely", return_value=archive):
+            with self.assertRaisesRegex(GitHubError, "ملفات كثيرة"):
+                self.client.get_job_logs("owner", "repo", 123)
+
     def test_extract_apk_requires_real_android_package(self):
         inner = io.BytesIO()
         with zipfile.ZipFile(inner, "w") as package:

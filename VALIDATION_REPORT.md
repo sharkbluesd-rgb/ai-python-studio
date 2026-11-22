@@ -1,6 +1,8 @@
-# AI Python Studio 1.1.0 — validation report
+# AI Python Studio 1.2.0 — validation report
 
-Date: 2026-11-21
+Updated: 2026-11-23
+
+> Historical 1.1.0 findings are retained below for traceability. The current 1.2.0 results are recorded in the final section; do not use the older 1.1.0 test counts as current validation.
 
 ## Source archive inspected
 
@@ -67,3 +69,27 @@ Still required before calling this release fully verified:
 - Upload, workflow dispatch, log retrieval, and APK saving must be exercised against a test repository.
 - The APK must be installed and launched on a physical Android device.
 - The intentionally unsandboxed local Python runner remains a known limitation.
+
+
+## Current 1.2.0 validation — 2026-11-23
+
+- Repository: `sharkbluesd-rgb/ai-python-studio`
+- Branch: `feature/studio-2.0`
+- Validated commit: `cfc50c87cf631593657eaa217fa4d142fa5c1f0c`
+- GitHub Actions run #60: successful.
+- Unit tests: 110 passed.
+- Python compile check: passed.
+- Ruff check across `src` and `tests`: passed.
+- Bandit scan across `src` at high severity/confidence threshold: passed.
+- `pip-audit -r requirements.txt`: no known vulnerabilities found.
+- Android APK build: passed; output APK reported by the build action as 53.8 MB.
+- Artifact: `flet-apk.zip`, 25,808,611 bytes, artifact ID `14770113247`, retention 14 days.
+- SHA-256 of uploaded artifact: `8dd54238d9f5a4bc9b54b3fc5c574be9001b4b44dc052d3463ee79b5b68cb331`.
+- Build warning: Flutter reports Android Gradle Plugin 8.13.2 will soon fall below its supported version and recommends AGP 9.0.1 or later. This did not fail the build.
+- These CI checks do not replace a physical Android installation test, OAuth testing with a real account, or end-to-end upload/dispatch/log/download testing.
+
+### Additional hardening after run #60
+
+- Job-log ZIP extraction now limits the number of text entries, per-entry decompressed size and total decompressed size to reduce ZIP-bomb memory exhaustion.
+- Two regression tests cover excessive log entry count and oversized uncompressed log members.
+- The app version label is synchronized with the 1.2.0 package/workflow version.

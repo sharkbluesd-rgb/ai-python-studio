@@ -8,7 +8,7 @@ Do not run untrusted scripts. Do not treat the UI warning, syntax checker, threa
 
 ## Project archives
 
-ZIP import validates relative paths, rejects traversal and symbolic links, limits compressed archives to 12 MiB, limits each extracted member to 512 KiB and the project payload to 24 MiB, caps archive entries and supported project files, ignores common cache/build folders, bounds decompression reads, and only imports allowlisted file types. These checks reduce archive extraction risks but are not a substitute for platform-level sandboxing.
+ZIP import validates relative paths, rejects traversal and symbolic links, limits imported workspace ZIP archives to 12 MiB, limits GitHub upload archives to 24 MiB, limits each extracted/uploaded member to 512 KiB and the project payload to 24 MiB, caps archive entries and supported project files, ignores common cache/build folders, bounds decompression reads, and only imports allowlisted file types. These checks reduce archive extraction risks but are not a substitute for platform-level sandboxing.
 
 ## Reporting
 

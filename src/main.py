@@ -1057,7 +1057,7 @@ def main(page: ft.Page) -> None:
                     spacing=2, expand=True,
                 ),
                 ft.Container(
-                    content=ft.Text("v1.1", size=10, color="#D8D3FF"),
+                    content=ft.Text("v1.2.0", size=10, color="#D8D3FF"),
                     padding=ft.Padding.symmetric(horizontal=10, vertical=7),
                     bgcolor="#252342", border_radius=20,
                 ),

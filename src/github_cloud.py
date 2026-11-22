@@ -499,14 +499,31 @@ class GitHubClient:
         if raw.startswith(b"PK"):
             try:
                 with zipfile.ZipFile(io.BytesIO(raw)) as archive:
-                    chunks = [
-                        archive.read(name).decode("utf-8", "replace")
-                        for name in archive.namelist()
-                        if name.lower().endswith(".txt") and not name.startswith("/")
-                        and ".." not in PurePosixPath(name).parts
+                    text_files = [
+                        item for item in archive.infolist()
+                        if not item.is_dir() and item.filename.lower().endswith(".txt")
+                        and not item.filename.startswith("/")
+                        and ".." not in PurePosixPath(item.filename).parts
                     ]
+                    if len(text_files) > 100:
+                        raise GitHubError("أرشيف سجل البناء يحتوي ملفات كثيرة بشكل غير طبيعي.")
+                    total = 0
+                    chunks = []
+                    for item in text_files:
+                        if item.file_size > 5 * 1024 * 1024:
+                            raise GitHubError("أحد ملفات سجل البناء يتجاوز حد 5 MB.")
+                        total += item.file_size
+                        if total > 8 * 1024 * 1024:
+                            raise GitHubError("الحجم غير المضغوط لسجلات البناء يتجاوز 8 MB.")
+                        with archive.open(item) as source:
+                            content = source.read(item.file_size + 1)
+                        if len(content) != item.file_size:
+                            raise GitHubError("حجم ملف سجل البناء غير متطابق.")
+                        chunks.append(content.decode("utf-8", "replace"))
                     return "\n".join(chunks)[-40000:]
-            except zipfile.BadZipFile as exc:
+            except GitHubError:
+                raise
+            except (zipfile.BadZipFile, OSError, RuntimeError) as exc:
                 raise GitHubError("أرشيف سجل البناء غير صالح.") from exc
         return raw.decode("utf-8", "replace")[-40000:]
 
