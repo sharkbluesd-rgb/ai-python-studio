@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import flet as ft
 import flet_code_editor as fce
@@ -11,6 +11,7 @@ import flet_code_editor as fce
 from runner import check_python, execute_python
 from templates import TEMPLATES
 from editor_tabs import OpenFileTabs
+from file_tree import build_tree_entries
 from project_tools import analyze_project as inspect_project, format_analysis_report
 from workspace import MAX_ARCHIVE_BYTES, WorkspaceError, WorkspaceStore
 
@@ -105,6 +106,8 @@ def main(page: ft.Page) -> None:
     project_buttons = ft.Row(wrap=True, spacing=6)
     file_buttons = ft.Row(wrap=True, spacing=6)
     tab_buttons = ft.Row(wrap=True, spacing=4)
+    tree_view = ft.Column(controls=[], spacing=2, scroll=ft.ScrollMode.AUTO)
+    expanded_folders = set()
     active_file_label = ft.Text(active_file, size=13, color="#C7BFFF", weight=ft.FontWeight.BOLD)
     project_name_input = ft.TextField(hint_text="اسم المشروع الجديد", text_size=13, expand=True)
     file_name_input = ft.TextField(hint_text="مثال: src/utils.py", text_size=13, expand=True)
@@ -187,18 +190,48 @@ def main(page: ft.Page) -> None:
                 )
             )
 
+    def toggle_tree_folder(folder: str) -> None:
+        if folder in expanded_folders:
+            expanded_folders.remove(folder)
+        else:
+            expanded_folders.add(folder)
+        refresh_file_buttons()
+        page.update()
+
     def refresh_file_buttons() -> None:
         file_buttons.controls = []
-        for name in store.list_files(active_project):
-            is_active = name == active_file
-            file_buttons.controls.append(
-                ft.Button(
-                    content=name,
-                    on_click=lambda e, selected=name: open_file(selected),
-                    bgcolor=ACCENT if is_active else "#202A3A",
-                    color="white",
+        tree_view.controls = []
+
+        entries = build_tree_entries(
+            store.list_files(active_project),
+            store.list_folders(active_project),
+            expanded_folders,
+        )
+
+        for kind, path, depth in entries:
+            indent = "　" * depth
+            if kind == "folder":
+                opened = path in expanded_folders
+                symbol = "📂" if opened else "📁"
+                tree_view.controls.append(
+                    ft.Button(
+                        content=f"{indent}{symbol} {PurePosixPath(path).name}",
+                        on_click=lambda e, selected=path: toggle_tree_folder(selected),
+                        bgcolor="#202A3A",
+                        color="white",
+                    )
                 )
-            )
+            else:
+                is_active = path == active_file
+                tree_view.controls.append(
+                    ft.Button(
+                        content=f"{indent}📄 {PurePosixPath(path).name}",
+                        on_click=lambda e, selected=path: open_file(selected),
+                        bgcolor=ACCENT if is_active else "#172131",
+                        color="white",
+                    )
+                )
+
         active_file_label.value = active_file
         refresh_tab_buttons()
 
@@ -796,7 +829,16 @@ def main(page: ft.Page) -> None:
                 ),
                 ft.Text("التبويبات المفتوحة", size=11, color=MUTED),
                 tab_buttons,
-                file_buttons,
+                ft.Row(
+                    controls=[ft.Text("مستكشف المشروع", size=12, color=MUTED)],
+                ),
+                ft.Container(
+                    content=tree_view,
+                    height=250,
+                    bgcolor="#0D1420",
+                    border_radius=8,
+                    padding=6,
+                ),
                 ft.Row(
                     controls=[file_name_input, ft.Button(content="ملف جديد", on_click=create_file)],
                     spacing=6,
