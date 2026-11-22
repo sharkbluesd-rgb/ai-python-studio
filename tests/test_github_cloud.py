@@ -126,10 +126,12 @@ class GitHubCloudTests(unittest.TestCase):
         inner = io.BytesIO()
         with zipfile.ZipFile(inner, "w") as package:
             package.writestr("AndroidManifest.xml", b"binary manifest")
-        outer = self.make_zip([("app-release.apk", inner.getvalue())])
-        filename, content = GitHubClient.extract_apk(outer)
+            package.writestr("classes.dex", b"x" * 1500)
+        apk_bytes = inner.getvalue()
+        wrapper = self.make_zip([("flet-apk.zip", self.make_zip([("app-release.apk", apk_bytes)]))])
+        filename, content = GitHubClient.extract_apk(wrapper)
         self.assertEqual(filename, "app-release.apk")
-        self.assertEqual(content, inner.getvalue())
+        self.assertEqual(content, apk_bytes)
 
     def test_extract_apk_rejects_non_apk_zip(self):
         outer = self.make_zip([("app.apk", b"not a package" * 200)])

@@ -333,7 +333,9 @@ class GitHubClient:
                         or any(len(part) > 100 for part in parts)
                     ):
                         raise GitHubError("الأرشيف يحتوي مسار ملف غير آمن.")
-                    if any(part.lower() in {".env", ".env.local", ".env.production"} or part.lower().startswith(".env.") for part in parts):
+                    if any(part in _IGNORED_PARTS for part in parts):
+                        continue
+                    if any(part.lower() == ".env" or part.lower().startswith(".env.") for part in parts):
                         raise GitHubError("أزل ملفات البيئة والأسرار (.env) قبل رفع المشروع.")
                     for part in parts[:-1]:
                         if part.startswith(".") and part not in _ALLOWED_HIDDEN_DIRS:
@@ -342,10 +344,9 @@ class GitHubClient:
                         if parts[0] in _IGNORED_PARTS:
                             continue
                         raise GitHubError("الأرشيف يحتوي ملفاً مخفياً غير مسموح.")
-                    if any(part in _IGNORED_PARTS for part in parts):
-                        continue
                     mode = (item.external_attr >> 16) & 0xFFFF
-                    if stat.S_ISLNK(mode) or (mode and not stat.S_ISREG(mode)):
+                    file_type = stat.S_IFMT(mode)
+                    if file_type == stat.S_IFLNK or (file_type and file_type != stat.S_IFREG):
                         raise GitHubError("الأرشيف يحتوي رابطاً رمزياً أو نوع ملف غير مسموح.")
                     if item.flag_bits & 0x1:
                         raise GitHubError("الأرشيف يحتوي ملفات مشفرة غير مدعومة.")
@@ -474,37 +475,57 @@ class GitHubClient:
 
     @staticmethod
     def extract_apk(artifact_zip: bytes) -> tuple[str, bytes]:
-        """Extract one APK from a downloaded artifact and verify its package structure."""
-        try:
-            with zipfile.ZipFile(io.BytesIO(artifact_zip)) as archive:
-                candidates = [
-                    item for item in archive.infolist()
-                    if not item.is_dir() and item.filename.lower().endswith(".apk")
-                ]
-                if len(candidates) != 1:
-                    raise GitHubError("يجب أن يحتوي ملف البناء على APK واحد فقط.")
-                item = candidates[0]
-                path = PurePosixPath(item.filename)
-                if path.is_absolute() or any(part in {"", ".", ".."} for part in path.parts):
-                    raise GitHubError("مسار APK داخل الأرشيف غير آمن.")
-                if item.file_size < 1024 or item.file_size > MAX_ARTIFACT_BYTES:
-                    raise GitHubError("حجم ملف APK غير منطقي أو يتجاوز الحد المسموح.")
-                with archive.open(item) as source:
-                    apk = source.read(MAX_ARTIFACT_BYTES + 1)
-                if len(apk) != item.file_size or len(apk) > MAX_ARTIFACT_BYTES:
-                    raise GitHubError("حجم ملف APK المستخرج غير متطابق.")
-        except GitHubError:
-            raise
-        except (zipfile.BadZipFile, OSError, RuntimeError) as exc:
-            raise GitHubError("أرشيف البناء تالف أو غير صالح.") from exc
+        """Unwrap the Actions artifact, extract one APK, and verify Android structure."""
+        def find_apk(data: bytes, depth: int = 0) -> tuple[str, bytes]:
+            if depth > 2:
+                raise GitHubError("بنية أرشيف البناء متداخلة بشكل غير متوقع.")
+            try:
+                with zipfile.ZipFile(io.BytesIO(data)) as archive:
+                    files = [item for item in archive.infolist() if not item.is_dir()]
+                    apks = [item for item in files if item.filename.lower().endswith(".apk")]
+                    if len(apks) == 1:
+                        item = apks[0]
+                        path = PurePosixPath(item.filename)
+                        if path.is_absolute() or any(part in {"", ".", ".."} for part in path.parts):
+                            raise GitHubError("مسار APK داخل الأرشيف غير آمن.")
+                        if item.file_size < 1024 or item.file_size > MAX_ARTIFACT_BYTES:
+                            raise GitHubError("حجم ملف APK غير منطقي أو يتجاوز الحد المسموح.")
+                        with archive.open(item) as source:
+                            apk = source.read(MAX_ARTIFACT_BYTES + 1)
+                        if len(apk) != item.file_size or len(apk) > MAX_ARTIFACT_BYTES:
+                            raise GitHubError("حجم ملف APK المستخرج غير متطابق.")
+                        return path.name, apk
+                    if len(apks) > 1:
+                        raise GitHubError("يحتوي ملف البناء أكثر من APK واحد؛ اختر نسخة محددة.")
+                    nested = [
+                        item for item in files
+                        if item.filename.lower().endswith(".zip")
+                        and not item.filename.startswith("/")
+                        and ".." not in PurePosixPath(item.filename).parts
+                    ]
+                    if depth < 2 and len(nested) == 1:
+                        item = nested[0]
+                        if item.file_size > MAX_ARTIFACT_BYTES:
+                            raise GitHubError("أرشيف APK الداخلي يتجاوز الحد المسموح.")
+                        with archive.open(item) as source:
+                            inner = source.read(MAX_ARTIFACT_BYTES + 1)
+                        if len(inner) != item.file_size or len(inner) > MAX_ARTIFACT_BYTES:
+                            raise GitHubError("حجم أرشيف APK الداخلي غير متطابق.")
+                        return find_apk(inner, depth + 1)
+                    raise GitHubError("لم يتم العثور على APK داخل ملف البناء.")
+            except GitHubError:
+                raise
+            except (zipfile.BadZipFile, OSError, RuntimeError) as exc:
+                raise GitHubError("أرشيف البناء تالف أو غير صالح.") from exc
+
+        filename, apk = find_apk(artifact_zip)
         try:
             with zipfile.ZipFile(io.BytesIO(apk)) as package:
-                names = set(package.namelist())
-                if "AndroidManifest.xml" not in names:
+                if "AndroidManifest.xml" not in set(package.namelist()):
                     raise GitHubError("الملف المستخرج ليس تطبيق Android APK صالحاً.")
         except zipfile.BadZipFile as exc:
             raise GitHubError("ملف APK المستخرج غير صالح.") from exc
-        return path.name, apk
+        return filename, apk
 
     def clear(self) -> None:
         """Best-effort removal of the token reference from this client."""
