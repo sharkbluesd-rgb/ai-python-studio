@@ -104,7 +104,7 @@ def execute_unittest_discovery(
         part in {"", ".", ".."} for part in relative.parts
     ):
         return "مسار مجلد الاختبارات غير صالح.", False
-    if not isinstance(pattern, str) or not pattern or "/" in pattern or "\\\\" in pattern:
+    if not isinstance(pattern, str) or not pattern or "/" in pattern or "\\" in pattern:
         return "نمط أسماء ملفات الاختبار غير صالح.", False
 
     root = Path(project_root).expanduser().resolve()
@@ -117,22 +117,22 @@ def execute_unittest_discovery(
         return f"لم يتم العثور على مجلد الاختبارات: {tests_dir}", False
 
     script = (
-        "import sys, unittest\\n"
-        "from pathlib import Path\\n"
-        f"test_root = Path({str(test_root)!r})\\n"
-        f"project_root = Path({str(root)!r})\\n"
-        f"pattern = {pattern!r}\\n"
-        "suite = unittest.defaultTestLoader.discover(\\n"
-        "    start_dir=str(test_root), pattern=pattern, top_level_dir=str(project_root)\\n"
-        ")\\n"
-        "count = suite.countTestCases()\\n"
-        "if count == 0:\\n"
-        "    print('لم يتم العثور على اختبارات مطابقة.')\\n"
-        "    raise RuntimeError('No tests were discovered')\\n"
-        "print(f'عدد الاختبارات المكتشفة: {count}')\\n"
-        "result = unittest.TextTestRunner(stream=sys.stdout, verbosity=2).run(suite)\\n"
+        "import sys, unittest\n"
+        "from pathlib import Path\n"
+        f"test_root = Path({str(test_root)!r})\n"
+        f"project_root = Path({str(root)!r})\n"
+        f"pattern = {pattern!r}\n"
+        "suite = unittest.defaultTestLoader.discover(\n"
+        "    start_dir=str(test_root), pattern=pattern, \n"
+        ")\n"
+        "count = suite.countTestCases()\n"
+        "if count == 0:\n"
+        "    print('لم يتم العثور على اختبارات مطابقة.')\n"
+        "    raise RuntimeError('No tests were discovered')\n"
+        "print(f'عدد الاختبارات المكتشفة: {count}')\n"
+        "result = unittest.TextTestRunner(stream=sys.stdout, verbosity=2).run(suite)\n"
         "print(f'النتيجة: {result.testsRun} اختبار، {len(result.failures)} فشل، "
-        "{len(result.errors)} خطأ')\\n"
+        "{len(result.errors)} خطأ')\n"
     )
     synthetic_file = root / "__ai_python_studio_test_runner__.py"
     output, executed = execute_python(
