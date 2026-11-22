@@ -82,35 +82,35 @@ TEMPLATES: dict[str, dict[str, str]] = {
     },
     "Flet Android App": {
         "src/main.py": (
-            "import flet as ft\\n\\n"
-            "def main(page: ft.Page):\\n"
-            "    page.title = \\"My Android App\\"\\n"
-            "    page.add(ft.SafeArea(content=ft.Column(controls=[\\n"
-            "        ft.Text(\\"Hello from Python!\\", size=26),\\n"
-            "        ft.Text(\\"Your Android app starts here.\\"),\\n"
-            "    ], spacing=16)))\\n\\n"
-            "if __name__ == \\"__main__\\":\\n"
-            "    ft.run(main)\\n"
+            "import flet as ft\n\n"
+            "def main(page: ft.Page):\n"
+            "    page.title = \"My Android App\"\n"
+            "    page.add(ft.SafeArea(content=ft.Column(controls=[\n"
+            "        ft.Text(\"Hello from Python!\", size=26),\n"
+            "        ft.Text(\"Your Android app starts here.\"),\n"
+            "    ], spacing=16)))\n\n"
+            "if __name__ == \"__main__\":\n"
+            "    ft.run(main)\n"
         ),
         "pyproject.toml": (
-            "[project]\\nname = \\"my-android-app\\"\\nversion = \\"0.1.0\\"\\n"
-            "requires-python = \\">=3.10\\"\\ndependencies = [\\"flet==1.1.2\\"]\\n\\n"
-            "[tool.flet]\\nproduct = \\"My Android App\\"\\norg = \\"com.example.myandroidapp\\"\\n\\n"
-            "[tool.flet.app]\\npath = \\"src\\"\\n"
+            "[project]\nname = \"my-android-app\"\nversion = \"0.1.0\"\n"
+            "requires-python = \">=3.10\"\ndependencies = [\"flet==1.1.2\"]\n\n"
+            "[tool.flet]\nproduct = \"My Android App\"\norg = \"com.example.myandroidapp\"\n\n"
+            "[tool.flet.app]\npath = \"src\"\n"
         ),
-        "requirements.txt": "flet==1.1.2\\n",
+        "requirements.txt": "flet==1.1.2\n",
         ".github/workflows/build-apk.yml": (
-            "name: Build Android APK\\n\\non:\\n  workflow_dispatch:\\n  push:\\n    branches: [main]\\n\\n"
-            "jobs:\\n  build:\\n    runs-on: ubuntu-latest\\n    steps:\\n"
-            "      - uses: actions/checkout@v4\\n"
-            "      - name: Build APK\\n        id: build\\n        uses: flet-dev/flet-build-action@v1\\n"
-            "        with:\\n          target: apk\\n          runner-python-version: '3.12'\\n"
-            "          bundled-python-version: '3.12'\\n          build-version: '0.1.0'\\n"
-            "          build-number: \${{ github.run_number }}\\n"
-            "      - uses: actions/upload-artifact@v4\\n        with:\\n          name: android-apk\\n"
-            "          path: \${{ steps.build.outputs.archive-path }}\\n          if-no-files-found: error\\n"
+            "name: Build Android APK\n\non:\n  workflow_dispatch:\n  push:\n    branches: [main]\n\n"
+            "jobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n"
+            "      - uses: actions/checkout@v4\n"
+            "      - name: Build APK\n        id: build\n        uses: flet-dev/flet-build-action@v1\n"
+            "        with:\n          target: apk\n          runner-python-version: '3.12'\n"
+            "          bundled-python-version: '3.12'\n          build-version: '0.1.0'\n"
+            "          build-number: \${{ github.run_number }}\n"
+            "      - uses: actions/upload-artifact@v4\n        with:\n          name: android-apk\n"
+            "          path: \${{ steps.build.outputs.archive-path }}\n          if-no-files-found: error\n"
         ),
-        "README.md": "# Flet Android App\\n\\nUpload this project to GitHub, run Build Android APK from Actions, then download the android-apk artifact.\\n",
+        "README.md": "# Flet Android App\n\nUpload this project to GitHub, run Build Android APK from Actions, then download the android-apk artifact.\n",
     },
     "Unit Testing Starter": {
         "main.py": (
