@@ -18,14 +18,14 @@ from workspace import MAX_ARCHIVE_BYTES, WorkspaceError, WorkspaceStore
 from package_manager import PackageManagerError, parse_requirements, install_packages, list_installed
 
 
-APP_BG = "#080B12"
-PANEL = "#111722"
-EDITOR_BG = "#0B111B"
-ACCENT = "#8B7CFF"
-TEXT = "#EEF1F8"
-MUTED = "#9BA7BA"
-SUCCESS = "#9AE6B4"
-DANGER = "#FF9292"
+APP_BG = "#080D16"
+PANEL = "#121B2A"
+EDITOR_BG = "#0A111D"
+ACCENT = "#8175F5"
+TEXT = "#F2F4FC"
+MUTED = "#9AA8BC"
+SUCCESS = "#83DDB8"
+DANGER = "#FF8F9B"
 OUTPUT_LIMIT = 40_000
 
 LANGUAGE_BY_SUFFIX = {
@@ -62,8 +62,8 @@ def main(page: ft.Page) -> None:
     page.title = "AI Python Studio"
     page.theme_mode = ft.ThemeMode.DARK
     page.bgcolor = APP_BG
-    page.padding = 12
-    page.spacing = 10
+    page.padding = 0
+    page.spacing = 0
     page.scroll = ft.ScrollMode.AUTO
 
     settings = store.load_settings()
@@ -387,6 +387,9 @@ def main(page: ft.Page) -> None:
         try:
             folder = store.create_folder(active_project, folder_name_input.value or "")
             folder_name_input.value = ""
+            expanded_folders.add(folder)
+            refresh_file_buttons()
+            refresh_project_summary()
             set_status(f"تم إنشاء المجلد {folder}.", SUCCESS)
             page.update()
         except WorkspaceError as exc:
@@ -848,7 +851,7 @@ def main(page: ft.Page) -> None:
         page.update()
 
     def clear_output(e) -> None:
-        output_text.value = "تم مسح نافذة النتائج."
+        output_text.value = "سجل المخرجات فارغ."
         output_text.color = MUTED
         page.update()
 
@@ -883,278 +886,434 @@ def main(page: ft.Page) -> None:
     stop_button.on_click = stop_code
     replace_apply_button.on_click = apply_project_replace
 
+    # ── Visual system: compact mobile IDE ──────────────────────────────
+    def make_panel(content, *, padding=14, radius=18, height=None):
+        return ft.Container(
+            content=content,
+            padding=padding,
+            bgcolor=PANEL,
+            border=ft.Border.all(1, "#243147"),
+            border_radius=radius,
+            height=height,
+        )
+
+    def section_heading(title, subtitle=None):
+        controls = [
+            ft.Text(title, size=15, weight=ft.FontWeight.BOLD, color=TEXT),
+        ]
+        if subtitle:
+            controls.append(ft.Text(subtitle, size=11, color=MUTED))
+        return ft.Column(controls=controls, spacing=3)
+
+    # Header
+    project_summary = ft.Text("", size=11, color=MUTED)
     header = ft.Container(
         content=ft.Row(
             controls=[
                 ft.Container(
-                    content=ft.Text("Py", size=19, weight=ft.FontWeight.BOLD, color="white"),
-                    bgcolor=ACCENT,
-                    padding=12,
-                    border_radius=12,
+                    content=ft.Text(
+                        "Py", size=20, weight=ft.FontWeight.BOLD, color="white"
+                    ),
+                    width=46, height=46, alignment=ft.Alignment.CENTER,
+                    bgcolor=ACCENT, border_radius=15,
                 ),
                 ft.Column(
                     controls=[
-                        ft.Text("AI Python Studio", size=22, weight=ft.FontWeight.BOLD, color=TEXT),
-                        ft.Text("Mobile Python Development Workspace", size=11, color=MUTED),
+                        ft.Text(
+                            "AI Python Studio", size=18,
+                            weight=ft.FontWeight.BOLD, color=TEXT,
+                        ),
+                        ft.Text(
+                            "بيئة تطوير Python للهاتف", size=11, color=MUTED
+                        ),
                     ],
-                    spacing=2,
-                    expand=True,
+                    spacing=2, expand=True,
                 ),
-                ft.Text("1.1", size=12, color="#C7BFFF", weight=ft.FontWeight.BOLD),
+                ft.Container(
+                    content=ft.Text("v1.1", size=10, color="#D8D3FF"),
+                    padding=ft.Padding.symmetric(horizontal=10, vertical=7),
+                    bgcolor="#252342", border_radius=20,
+                ),
             ],
-            spacing=12,
+            spacing=11,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
         ),
-        padding=14,
-        bgcolor=PANEL,
-        border_radius=16,
-        border=ft.Border.all(1, "#202B3B"),
+        padding=ft.Padding.only(left=16, right=16, top=10, bottom=10),
+        bgcolor="#0E1623",
+        border=ft.Border.only(bottom=ft.BorderSide(1, "#243147")),
     )
 
-    project_summary = ft.Text("", size=11, color=MUTED)
-    project_panel = ft.Container(
-        content=ft.Column(
+    # Projects screen
+    project_panel = make_panel(
+        ft.Column(
             controls=[
-                ft.Text("المشاريع", size=13, weight=ft.FontWeight.BOLD, color=MUTED),
+                section_heading("مساحة المشاريع", "أنشئ مشاريعك وافتحها ونظّم ملفاتك"),
                 project_buttons,
                 project_summary,
                 ft.Row(
-                    controls=[project_name_input, ft.Button(content="إنشاء", on_click=create_project)],
-                    spacing=6,
+                    controls=[
+                        project_name_input,
+                        ft.Button(
+                            content="إنشاء مشروع", on_click=create_project,
+                            bgcolor=ACCENT, color="white",
+                        ),
+                    ],
+                    spacing=8,
                 ),
                 ft.Row(
                     controls=[
-                        *[
-                            ft.Button(
-                                content=template_name,
-                                on_click=lambda e, selected=template_name: create_template_project(selected),
-                            )
-                            for template_name in TEMPLATES
-                        ],
+                        ft.Button(
+                            content=template_name,
+                            on_click=lambda e, selected=template_name: create_template_project(selected),
+                        )
+                        for template_name in TEMPLATES
+                    ],
+                    wrap=True, spacing=7,
+                ),
+                ft.Row(
+                    controls=[
                         ft.Button(content="استيراد ZIP", on_click=import_project_zip),
                         ft.Button(content="تصدير ZIP", on_click=export_project_zip),
                     ],
-                    wrap=True,
+                    wrap=True, spacing=7,
+                ),
+            ],
+            spacing=12,
+        )
+    )
+
+    project_welcome = make_panel(
+        ft.Column(
+            controls=[
+                ft.Text("مساحة عملك، مرتّبة.", size=16, weight=ft.FontWeight.BOLD, color=TEXT),
+                ft.Text(
+                    "اختر مشروعاً للمتابعة، أو ابدأ مشروعاً جديداً من الصفر أو من أحد القوالب.",
+                    size=12, color=MUTED,
+                ),
+                ft.Row(
+                    controls=[
+                        ft.Text("●", color=SUCCESS, size=12),
+                        ft.Text("الحفظ التلقائي مفعّل", color=SUCCESS, size=11),
+                    ],
                     spacing=6,
                 ),
             ],
             spacing=8,
         ),
-        padding=12,
-        bgcolor=PANEL,
-        border_radius=14,
-        border=ft.Border.all(1, "#202B3B"),
+        padding=16,
     )
 
+    # Editor screen: code comes first; file operations stay below it.
     toolbar = ft.Row(
         controls=[
             run_button,
             stop_button,
-            ft.Button(content="فحص الكود", on_click=check_current_syntax),
+            ft.Button(content="فحص", on_click=check_current_syntax),
             ft.Button(content="حفظ", on_click=lambda e: save_and_update()),
             ft.Button(content="مثال", on_click=load_example),
         ],
-        wrap=True,
-        spacing=6,
+        wrap=True, spacing=7,
     )
 
-    editor_panel = ft.Container(
-        content=ft.Column(
+    editor_panel = make_panel(
+        ft.Column(
             controls=[
                 ft.Row(
                     controls=[
-                        ft.Text("مستكشف الملفات", size=12, weight=ft.FontWeight.BOLD, color=MUTED),
+                        ft.Column(
+                            controls=[
+                                ft.Text("محرر الأكواد", size=15, weight=ft.FontWeight.BOLD, color=TEXT),
+                                active_file_label,
+                            ],
+                            spacing=2, expand=True,
+                        ),
                         ft.Button(content="نسخ", on_click=duplicate_current_file),
                         ft.Button(content="حذف", on_click=delete_file),
                     ],
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                    wrap=True,
-                ),
-                ft.Text("التبويبات المفتوحة", size=11, color=MUTED),
-                tab_buttons,
-                ft.Row(
-                    controls=[ft.Text("مستكشف المشروع", size=12, color=MUTED)],
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
                 ft.Container(
-                    content=tree_view,
-                    height=250,
-                    bgcolor="#0D1420",
-                    border_radius=8,
-                    padding=6,
-                ),
-                ft.Row(
-                    controls=[file_name_input, ft.Button(content="ملف جديد", on_click=create_file)],
-                    spacing=6,
-                ),
-                ft.Row(
-                    controls=[folder_name_input, ft.Button(content="مجلد جديد", on_click=create_folder)],
-                    spacing=6,
-                ),
-                ft.Row(
-                    controls=[rename_input, ft.Button(content="إعادة تسمية", on_click=rename_current_file)],
-                    spacing=6,
-                ),
-                ft.Row(
-                    controls=[active_file_label, ft.Text("EDITOR", size=11, color=MUTED)],
-                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    content=tab_buttons,
+                    padding=ft.Padding.only(top=2, bottom=3),
                 ),
                 ft.Container(
                     content=editor,
                     bgcolor=EDITOR_BG,
-                    border_radius=12,
+                    border=ft.Border.all(1, "#26354C"),
+                    border_radius=14,
                     padding=4,
-                    expand=True,
-                    height=440,
+                    height=470,
                 ),
                 ft.Row(
                     controls=[
                         ft.Button(content="طي الاستيرادات", on_click=fold_imports),
-                        ft.Button(content="طي التعليق العلوي", on_click=fold_first_comment),
+                        ft.Button(content="طي التعليق", on_click=fold_first_comment),
                     ],
-                    wrap=True,
-                    spacing=6,
+                    wrap=True, spacing=7,
                 ),
-            ],
-            spacing=9,
-            expand=True,
-        ),
-        bgcolor=PANEL,
-        padding=10,
-        border_radius=16,
-        border=ft.Border.all(1, "#202B3B"),
-    )
-
-    search_panel = ft.Container(
-        content=ft.Column(
-            controls=[
-                ft.Text("البحث والاستبدال", size=12, weight=ft.FontWeight.BOLD, color=MUTED),
-                ft.Row(
-                    controls=[search_input, ft.Button(content="بحث المشروع", on_click=search_project)],
-                    spacing=6,
+                ft.Divider(color="#26354C", height=1),
+                section_heading("ملفات المشروع", "اضغط على المجلد لعرض محتوياته أو اختر ملفاً لفتحه"),
+                ft.Container(
+                    content=tree_view,
+                    height=175,
+                    bgcolor="#0B1320",
+                    border=ft.Border.all(1, "#26354C"),
+                    border_radius=12,
+                    padding=8,
                 ),
                 ft.Row(
-                    controls=[replace_find_input, replace_with_input, ft.Button(content="استبدال", on_click=replace_in_current_file)],
-                    spacing=6,
-                    wrap=True,
+                    controls=[
+                        file_name_input,
+                        ft.Button(content="ملف جديد", on_click=create_file),
+                    ],
+                    spacing=7,
+                ),
+                ft.Row(
+                    controls=[
+                        folder_name_input,
+                        ft.Button(content="مجلد جديد", on_click=create_folder),
+                    ],
+                    spacing=7,
+                ),
+                ft.Row(
+                    controls=[
+                        rename_input,
+                        ft.Button(content="إعادة تسمية", on_click=rename_current_file),
+                    ],
+                    spacing=7,
                 ),
             ],
-            spacing=8,
-        ),
-        padding=12,
-        bgcolor=PANEL,
-        border_radius=14,
-        border=ft.Border.all(1, "#202B3B"),
+            spacing=11,
+        )
     )
 
-    project_tools_panel = ft.Container(
-        content=ft.Column(
+    # Search and project tools
+    search_panel = make_panel(
+        ft.Column(
             controls=[
-                ft.Text("أدوات المشروع", size=12, weight=ft.FontWeight.BOLD, color=MUTED),
+                section_heading("البحث والاستبدال", "ابحث داخل المشروع أو عدّل الملف الحالي"),
+                ft.Row(
+                    controls=[
+                        search_input,
+                        ft.Button(content="بحث المشروع", on_click=search_project),
+                    ],
+                    spacing=7,
+                ),
+                ft.Row(
+                    controls=[replace_find_input, replace_with_input],
+                    spacing=7, wrap=True,
+                ),
+                ft.Button(content="استبدال في الملف الحالي", on_click=replace_in_current_file),
+            ],
+            spacing=11,
+        )
+    )
+
+    project_tools_panel = make_panel(
+        ft.Column(
+            controls=[
+                section_heading("أدوات المطوّر", "تحليل المشروع وتعديل الملفات بأمان"),
                 ft.Row(
                     controls=[
                         ft.Button(content="تحليل المشروع", on_click=analyze_current_project),
                         ft.Button(content="فتح requirements.txt", on_click=open_requirements_file),
                     ],
-                    wrap=True,
-                    spacing=6,
+                    wrap=True, spacing=7,
                 ),
-                ft.Text("استبدال شامل مع معاينة قبل تعديل الملفات", size=11, color=MUTED),
-                ft.Row(controls=[project_replace_find, project_replace_with], wrap=True, spacing=6),
+                ft.Divider(color="#26354C", height=1),
+                ft.Text("استبدال شامل مع معاينة قبل التطبيق", size=12, color=MUTED),
+                ft.Row(
+                    controls=[project_replace_find, project_replace_with],
+                    wrap=True, spacing=7,
+                ),
                 ft.Row(
                     controls=[
                         ft.Button(content="معاينة الاستبدال", on_click=preview_project_replace),
                         replace_apply_button,
                     ],
-                    wrap=True,
-                    spacing=6,
+                    wrap=True, spacing=7,
                 ),
             ],
-            spacing=8,
-        ),
-        padding=12,
-        bgcolor=PANEL,
-        border_radius=14,
-        border=ft.Border.all(1, "#202B3B"),
+            spacing=11,
+        )
     )
 
-    package_panel = ft.Container(
-        content=ft.Column(
+    # Package manager
+    package_panel = make_panel(
+        ft.Column(
             controls=[
-                ft.Text("مدير مكتبات Python", size=12, weight=ft.FontWeight.BOLD, color=MUTED),
+                section_heading("مدير مكتبات Python", "ثبّت الاعتماديات وتابع المكتبات المتاحة"),
                 ft.Row(
                     controls=[
                         package_name_input,
-                        ft.Button(content="تثبيت مكتبة", on_click=install_one_package),
+                        ft.Button(
+                            content="تثبيت المكتبة",
+                            on_click=install_one_package,
+                            bgcolor=ACCENT, color="white",
+                        ),
                     ],
-                    wrap=True,
-                    spacing=6,
+                    spacing=7,
                 ),
                 ft.Row(
                     controls=[
-                        ft.Button(content="تثبيت requirements.txt", on_click=install_project_requirements),
-                        ft.Button(content="المكتبات المثبتة", on_click=show_installed_packages),
+                        ft.Button(
+                            content="تثبيت requirements.txt",
+                            on_click=install_project_requirements,
+                        ),
+                        ft.Button(
+                            content="المكتبات المثبتة",
+                            on_click=show_installed_packages,
+                        ),
                     ],
-                    wrap=True,
-                    spacing=6,
+                    wrap=True, spacing=7,
                 ),
-                ft.Text(
-                    "التثبيت يستهدف مفسر Python الحالي. توافق المكتبات مع Android يختلف حسب الحزمة.",
-                    size=10, color=MUTED,
+                ft.Container(
+                    content=ft.Text(
+                        "ملاحظة: التثبيت يستهدف مفسر Python الحالي. توافق المكتبات مع Android يختلف حسب الحزمة.",
+                        size=11, color=MUTED,
+                    ),
+                    padding=12, bgcolor="#0D1725", border_radius=12,
                 ),
             ],
-            spacing=8,
-        ),
-        padding=12,
-        bgcolor=PANEL,
-        border_radius=14,
-        border=ft.Border.all(1, "#202B3B"),
+            spacing=12,
+        )
     )
 
-    output_panel = ft.Container(
-        content=ft.Column(
+    # Output / terminal
+    output_panel = make_panel(
+        ft.Column(
             controls=[
                 ft.Row(
                     controls=[
-                        ft.Text("OUTPUT / DIAGNOSTICS", size=11, weight=ft.FontWeight.BOLD, color=MUTED),
-                        ft.Button(content="مسح", on_click=clear_output),
+                        section_heading("الطرفية والنتائج", "مخرجات التشغيل وتشخيص الأخطاء"),
+                        ft.Button(content="مسح السجل", on_click=clear_output),
                     ],
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
                 ft.Container(
                     content=output_text,
-                    bgcolor="#080C12",
-                    padding=12,
-                    border_radius=10,
+                    bgcolor="#080E17",
+                    border=ft.Border.all(1, "#26354C"),
+                    padding=14,
+                    border_radius=12,
                     expand=True,
                 ),
             ],
-            spacing=8,
+            spacing=10,
             expand=True,
         ),
-        bgcolor=PANEL,
-        padding=10,
-        border_radius=16,
-        border=ft.Border.all(1, "#202B3B"),
-        height=230,
+        height=390,
     )
 
     safety_note = ft.Text(
-        "تنبيه: تشغيل Python محلياً ليس بيئة معزولة. شغّل الأكواد التي تثق بها فقط.",
-        color="#DDBB78",
-        size=10,
+        "تنبيه أمني: تشغيل Python محلياً ليس بيئة معزولة. شغّل الأكواد التي تثق بها فقط.",
+        color="#DDBB78", size=10,
+    )
+
+    # Independent screens, switched without destroying editor/project state.
+    screens = {
+        "projects": ft.Column(
+            controls=[project_panel, project_welcome, safety_note],
+            spacing=12, scroll=ft.ScrollMode.AUTO, expand=True,
+        ),
+        "editor": ft.Column(
+            controls=[toolbar, editor_panel],
+            spacing=12, scroll=ft.ScrollMode.AUTO, expand=True,
+        ),
+        "tools": ft.Column(
+            controls=[search_panel, project_tools_panel],
+            spacing=12, scroll=ft.ScrollMode.AUTO, expand=True,
+        ),
+        "packages": ft.Column(
+            controls=[package_panel],
+            spacing=12, scroll=ft.ScrollMode.AUTO, expand=True,
+        ),
+        "terminal": ft.Column(
+            controls=[output_panel],
+            spacing=12, scroll=ft.ScrollMode.AUTO, expand=True,
+        ),
+    }
+
+    screen_host = ft.Container(content=screens["editor"], expand=True, padding=12)
+    nav_buttons = {}
+    navigation_items = [
+        ("projects", "▦", "المشاريع"),
+        ("editor", "⌨", "المحرر"),
+        ("tools", "⌕", "الأدوات"),
+        ("packages", "◇", "الحزم"),
+        ("terminal", "▤", "النتائج"),
+    ]
+    active_screen = {"name": "editor"}
+
+    def show_screen(name: str) -> None:
+        if name not in screens:
+            return
+        active_screen["name"] = name
+        screen_host.content = screens[name]
+        for key, button in nav_buttons.items():
+            selected = key == name
+            button.bgcolor = "#302D59" if selected else "#121C2A"
+            button.color = "#E3DFFF" if selected else MUTED
+        page.update()
+
+    nav_cells = []
+    for key, symbol, label in navigation_items:
+        button = ft.Button(
+            content=ft.Column(
+                controls=[
+                    ft.Text(symbol, size=17, weight=ft.FontWeight.BOLD),
+                    ft.Text(label, size=10, weight=ft.FontWeight.BOLD),
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=1,
+            ),
+            on_click=lambda e, target=key: show_screen(target),
+            bgcolor="#302D59" if key == "editor" else "#121C2A",
+            color="#E3DFFF" if key == "editor" else MUTED,
+            expand=True,
+        )
+        nav_buttons[key] = button
+        nav_cells.append(ft.Container(content=button, expand=1))
+
+    nav_bar = ft.Container(
+        content=ft.Row(controls=nav_cells, spacing=5),
+        padding=ft.Padding.only(left=9, right=9, top=8, bottom=8),
+        bgcolor="#0E1623",
+        border=ft.Border.only(top=ft.BorderSide(1, "#243147")),
+    )
+
+    status_bar = ft.Container(
+        content=ft.Row(
+            controls=[
+                ft.Container(
+                    width=7, height=7, bgcolor=SUCCESS, border_radius=8,
+                ),
+                ft.Container(content=status_text, expand=True),
+                ft.Text("ANDROID · PYTHON", size=9, color="#718098"),
+            ],
+            spacing=8,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
+        padding=ft.Padding.symmetric(horizontal=16, vertical=8),
+        bgcolor="#0B1320",
     )
 
     page.add(
         ft.SafeArea(
             content=ft.Column(
-                controls=[header, project_panel, toolbar, editor_panel, search_panel, project_tools_panel, package_panel, output_panel, status_text, safety_note],
-                spacing=10,
+                controls=[header, screen_host, status_bar, nav_bar],
+                spacing=0,
                 expand=True,
-            )
+            ),
+            expand=True,
         )
     )
     refresh_project_buttons()
     refresh_file_buttons()
     refresh_project_summary()
+    show_screen("editor")
 
 
 if __name__ == "__main__":
