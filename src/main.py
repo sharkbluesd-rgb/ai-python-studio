@@ -1304,6 +1304,12 @@ def main(page: ft.Page) -> None:
                     job_lines.append(f"{job.get('name')}: {job.get('status')} / {job.get('conclusion') or 'قيد التنفيذ'}")
                     for step in job.get("steps", []):
                         job_lines.append(f"  - {step.get('name')}: {step.get('conclusion') or step.get('status')}")
+                    if job.get("conclusion") in ("failure", "cancelled", "timed_out"):
+                        try:
+                            logs = await asyncio.to_thread(client.get_job_logs, owner, repo_name, job["id"])
+                            job_lines.append("\n--- سجل الوظيفة ---\n" + logs[-12000:])
+                        except GitHubError as log_error:
+                            job_lines.append(f"تعذر تحميل السجل: {log_error}")
                 output_text.value = (
                     f"GitHub Actions · Run #{run.get('run_number')}\\n"
                     f"الحالة: {run.get('status')} · النتيجة: {run.get('conclusion') or 'لم تنته'}\\n"
