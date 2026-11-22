@@ -116,7 +116,7 @@ def validate_branch(branch: str) -> str:
     branch = (branch or "").strip()
     forbidden = set(" ~^:?*[\\")
     if (
-        not branch or len(branch) > 255 or branch.startswith("/") or branch.endswith("/")
+        not branch or len(branch) > 255 or branch.startswith("-") or branch.startswith("/") or branch.endswith("/")
         or branch.endswith(".") or branch.startswith(".") or "//" in branch
         or ".." in branch or "@{" in branch or any(ch in forbidden or ord(ch) < 32 or ord(ch) == 127 for ch in branch)
     ):
