@@ -66,7 +66,7 @@ class FletProjectConfigurationTests(unittest.TestCase):
             root = self.make_project(Path(temp))
             workflow_path = root / ".github" / "workflows" / "build-apk.yml"
             original = workflow_path.read_text(encoding="utf-8")
-            workflow_path.write_text(original.replace("  workflow_dispatch:\\n", ""), encoding="utf-8")
+            workflow_path.write_text(original.replace("workflow_dispatch:", "manual_dispatch:"), encoding="utf-8")
             issues = validate_flet_project(root)
             self.assertTrue(any("workflow_dispatch" in issue for issue in issues))
 
