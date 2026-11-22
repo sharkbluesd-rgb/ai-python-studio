@@ -1,9 +1,10 @@
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 import sys
 
-from runner import check_python, execute_python
+from runner import ExecutionControl, check_python, execute_python
 
 
 class RunnerTests(unittest.TestCase):
@@ -91,3 +92,43 @@ class StreamingRunnerTests(unittest.TestCase):
         self.assertFalse(success)
         self.assertIn("ValueError: streamed error", "".join(chunks))
         self.assertIn("ValueError: streamed error", result)
+
+
+class ExecutionControlTests(unittest.TestCase):
+    def test_cancels_infinite_python_loop(self):
+        control = ExecutionControl(timeout_seconds=None)
+        timer = threading.Timer(0.05, control.cancel)
+        timer.start()
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                result, success = execute_python(
+                    "while True:\n    pass",
+                    str(Path(directory) / "loop.py"),
+                    control=control,
+                )
+        finally:
+            timer.cancel()
+        self.assertFalse(success)
+        self.assertIn("تم إيقاف التنفيذ", result)
+
+    def test_times_out_infinite_python_loop(self):
+        control = ExecutionControl(timeout_seconds=0.05)
+        with tempfile.TemporaryDirectory() as directory:
+            result, success = execute_python(
+                "while True:\n    pass",
+                str(Path(directory) / "loop.py"),
+                control=control,
+            )
+        self.assertFalse(success)
+        self.assertIn("انتهت مهلة التنفيذ", result)
+
+    def test_normal_execution_still_works_with_control(self):
+        control = ExecutionControl(timeout_seconds=5)
+        with tempfile.TemporaryDirectory() as directory:
+            result, success = execute_python(
+                "print('controlled')",
+                str(Path(directory) / "main.py"),
+                control=control,
+            )
+        self.assertTrue(success)
+        self.assertIn("controlled", result)
