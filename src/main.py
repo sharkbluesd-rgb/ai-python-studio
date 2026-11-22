@@ -10,6 +10,7 @@ import flet_code_editor as fce
 
 from runner import check_python, execute_python
 from templates import TEMPLATES
+from editor_tabs import OpenFileTabs
 from project_tools import analyze_project as inspect_project, format_analysis_report
 from workspace import MAX_ARCHIVE_BYTES, WorkspaceError, WorkspaceStore
 
@@ -74,6 +75,8 @@ def main(page: ft.Page) -> None:
     if active_file not in available_files:
         active_file = "main.py" if "main.py" in available_files else available_files[0]
 
+    tabs = OpenFileTabs(active_file)
+
     editor = fce.CodeEditor(
         value=store.read_file(active_project, active_file),
         language=LANGUAGE_BY_SUFFIX.get(Path(active_file).suffix.lower(), fce.CodeLanguage.PLAINTEXT),
@@ -101,6 +104,7 @@ def main(page: ft.Page) -> None:
     status_text = ft.Text("تم تحميل مساحة العمل.", size=12, color=SUCCESS)
     project_buttons = ft.Row(wrap=True, spacing=6)
     file_buttons = ft.Row(wrap=True, spacing=6)
+    tab_buttons = ft.Row(wrap=True, spacing=4)
     active_file_label = ft.Text(active_file, size=13, color="#C7BFFF", weight=ft.FontWeight.BOLD)
     project_name_input = ft.TextField(hint_text="اسم المشروع الجديد", text_size=13, expand=True)
     file_name_input = ft.TextField(hint_text="مثال: src/utils.py", text_size=13, expand=True)
@@ -159,6 +163,30 @@ def main(page: ft.Page) -> None:
                 )
             )
 
+    def refresh_tab_buttons() -> None:
+        tab_buttons.controls = []
+        for name in tabs.files:
+            is_active = name == active_file
+            tab_buttons.controls.append(
+                ft.Row(
+                    controls=[
+                        ft.Button(
+                            content=name,
+                            on_click=lambda e, selected=name: open_file(selected),
+                            bgcolor=ACCENT if is_active else "#202A3A",
+                            color="white",
+                        ),
+                        ft.Button(
+                            content="×",
+                            on_click=lambda e, selected=name: close_tab(selected),
+                            bgcolor="#3A2630",
+                            color="white",
+                        ),
+                    ],
+                    spacing=2,
+                )
+            )
+
     def refresh_file_buttons() -> None:
         file_buttons.controls = []
         for name in store.list_files(active_project):
@@ -172,6 +200,7 @@ def main(page: ft.Page) -> None:
                 )
             )
         active_file_label.value = active_file
+        refresh_tab_buttons()
 
     def refresh_project_summary() -> None:
         files = store.list_files(active_project)
@@ -186,12 +215,35 @@ def main(page: ft.Page) -> None:
         nonlocal active_file
         try:
             save_current_file()
+            tabs.open(name)
             active_file = name
             set_editor_content(store.read_file(active_project, active_file), active_file)
             store.save_settings(active_project, active_file)
             refresh_file_buttons()
             refresh_project_summary()
             set_status(f"تم فتح {active_file}", SUCCESS)
+            page.update()
+        except WorkspaceError as exc:
+            set_status(str(exc), DANGER)
+            page.update()
+
+    def close_tab(name: str) -> None:
+        nonlocal active_file
+        try:
+            if name == active_file:
+                save_current_file()
+            next_active = tabs.close(name)
+            if name == active_file:
+                if next_active is None:
+                    tabs.open(name)
+                    set_status("يجب إبقاء تبويب واحد مفتوح على الأقل.", MUTED)
+                else:
+                    active_file = next_active
+                    set_editor_content(
+                        store.read_file(active_project, active_file), active_file
+                    )
+                    store.save_settings(active_project, active_file)
+            refresh_file_buttons()
             page.update()
         except WorkspaceError as exc:
             set_status(str(exc), DANGER)
@@ -206,6 +258,7 @@ def main(page: ft.Page) -> None:
             if not project_files:
                 raise WorkspaceError("المشروع المحدد لا يحتوي على ملفات نصية.")
             active_file = "main.py" if "main.py" in project_files else project_files[0]
+            tabs.reset(active_file)
             set_editor_content(store.read_file(active_project, active_file), active_file)
             store.save_settings(active_project, active_file)
             refresh_project_buttons()
@@ -233,6 +286,7 @@ def main(page: ft.Page) -> None:
             new_id = store.create_project(project_name_input.value or "")
             active_project = new_id
             active_file = "main.py"
+            tabs.reset(active_file)
             set_editor_content(store.read_file(active_project, active_file), active_file)
             project_name_input.value = ""
             store.save_settings(active_project, active_file)
@@ -254,6 +308,7 @@ def main(page: ft.Page) -> None:
             )
             active_project = project_id
             active_file = "main.py"
+            tabs.reset(active_file)
             set_editor_content(store.read_file(active_project, active_file), active_file)
             store.save_settings(active_project, active_file)
             refresh_project_buttons()
@@ -275,6 +330,7 @@ def main(page: ft.Page) -> None:
         try:
             save_current_file()
             active_file = store.create_file(active_project, file_name_input.value or "")
+            tabs.open(active_file)
             file_name_input.value = ""
             set_editor_content(store.read_file(active_project, active_file), active_file)
             store.save_settings(active_project, active_file)
@@ -300,9 +356,11 @@ def main(page: ft.Page) -> None:
         nonlocal active_file
         try:
             save_current_file()
+            old_name = active_file
             new_name = store.rename_file(
                 active_project, active_file, rename_input.value or ""
             )
+            tabs.rename(old_name, new_name)
             active_file = new_name
             rename_input.value = ""
             set_editor_content(store.read_file(active_project, active_file), active_file)
@@ -318,9 +376,17 @@ def main(page: ft.Page) -> None:
     def delete_file(e) -> None:
         nonlocal active_file
         try:
-            store.delete_file(active_project, active_file)
+            save_current_file()
+            deleted_file = active_file
+            store.delete_file(active_project, deleted_file)
+            next_open = tabs.close(deleted_file)
             remaining = store.list_files(active_project)
-            active_file = "main.py" if "main.py" in remaining else remaining[0]
+            active_file = (
+                next_open if next_open in remaining
+                else ("main.py" if "main.py" in remaining else remaining[0])
+            )
+            if active_file not in tabs.files:
+                tabs.open(active_file)
             set_editor_content(store.read_file(active_project, active_file), active_file)
             store.save_settings(active_project, active_file)
             refresh_file_buttons()
@@ -336,6 +402,7 @@ def main(page: ft.Page) -> None:
         try:
             save_current_file()
             active_file = store.duplicate_file(active_project, active_file)
+            tabs.open(active_file)
             set_editor_content(store.read_file(active_project, active_file), active_file)
             store.save_settings(active_project, active_file)
             refresh_file_buttons()
@@ -371,6 +438,7 @@ def main(page: ft.Page) -> None:
             active_project = project_id
             files = store.list_files(active_project)
             active_file = "main.py" if "main.py" in files else files[0]
+            tabs.reset(active_file)
             set_editor_content(store.read_file(active_project, active_file), active_file)
             store.save_settings(active_project, active_file)
             refresh_project_buttons()
@@ -532,6 +600,7 @@ def main(page: ft.Page) -> None:
             if "requirements.txt" not in store.list_files(active_project):
                 store.create_file(active_project, "requirements.txt")
             active_file = "requirements.txt"
+            tabs.open(active_file)
             set_editor_content(store.read_file(active_project, active_file), active_file)
             store.save_settings(active_project, active_file)
             refresh_file_buttons()
@@ -725,6 +794,8 @@ def main(page: ft.Page) -> None:
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     wrap=True,
                 ),
+                ft.Text("التبويبات المفتوحة", size=11, color=MUTED),
+                tab_buttons,
                 file_buttons,
                 ft.Row(
                     controls=[file_name_input, ft.Button(content="ملف جديد", on_click=create_file)],
