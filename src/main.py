@@ -1688,7 +1688,8 @@ def main(page: ft.Page) -> None:
         ("editor", "⌨", "المحرر"),
         ("tools", "⌕", "الأدوات"),
         ("packages", "◇", "الحزم"),
-        ("terminal", "▤", "النتائج"),\n        ("github", "◈", "GitHub"),
+        ("terminal", "▤", "النتائج"),
+        ("github", "◈", "GitHub"),
     ]
     active_screen = {"name": "editor"}
 
