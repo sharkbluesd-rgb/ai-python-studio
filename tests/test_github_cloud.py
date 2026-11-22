@@ -7,6 +7,7 @@ import zipfile
 from unittest.mock import patch
 
 from github_cloud import (
+    DeviceAuthorization,
     GitHubClient,
     GitHubError,
     _oauth_request,
