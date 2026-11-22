@@ -106,9 +106,9 @@ TEMPLATES: dict[str, dict[str, str]] = {
             "      - name: Build APK\n        id: build\n        uses: flet-dev/flet-build-action@v1\n"
             "        with:\n          target: apk\n          runner-python-version: '3.12'\n"
             "          bundled-python-version: '3.12'\n          build-version: '0.1.0'\n"
-            "          build-number: \${{ github.run_number }}\n"
+            "          build-number: ${{ github.run_number }}\n"
             "      - uses: actions/upload-artifact@v4\n        with:\n          name: android-apk\n"
-            "          path: \${{ steps.build.outputs.archive-path }}\n          if-no-files-found: error\n"
+            "          path: ${{ steps.build.outputs.archive-path }}\n          if-no-files-found: error\n"
         ),
         "README.md": "# Flet Android App\n\nUpload this project to GitHub, run Build Android APK from Actions, then download the android-apk artifact.\n",
     },
