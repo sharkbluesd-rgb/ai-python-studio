@@ -17,6 +17,7 @@ from file_tree import build_tree_entries
 from project_tools import analyze_project as inspect_project, format_analysis_report
 from workspace import MAX_ARCHIVE_BYTES, WorkspaceError, WorkspaceStore
 from package_manager import PackageManagerError, parse_requirements, install_packages, list_installed
+from github_cloud import DeviceAuthorization, GitHubClient, GitHubError
 
 
 APP_BG = "#080D16"
@@ -140,6 +141,8 @@ def main(page: ft.Page) -> None:
     autosave_state = {"revision": 0}
     file_picker = ft.FilePicker()
     page.services.append(file_picker)
+    # GitHub credentials are deliberately session-only and never written to disk.
+    github_state = {"client": None, "device": None, "client_id": "", "owner": "", "repo": "", "branch": "main", "run_id": None}
 
     def set_status(message: str, color: str = MUTED) -> None:
         status_text.value = message
@@ -1105,6 +1108,280 @@ def main(page: ft.Page) -> None:
         ], spacing=9)
     )
 
+
+    # GitHub cloud build integration. OAuth tokens remain in memory only.
+    github_client_id = ft.TextField(label="OAuth Client ID", hint_text="Client ID من GitHub OAuth App", text_size=12)
+    github_repository = ft.TextField(label="المستودع owner/repository", hint_text="username/my-flet-app", text_size=12)
+    github_branch = ft.TextField(label="الفرع", value="main", text_size=12)
+    github_device_info = ft.Text("لم يتم ربط GitHub بعد.", size=11, color=MUTED, selectable=True)
+    github_private = ft.Checkbox(label="مستودع خاص (Private)", value=True)
+    github_status = ft.Text("الرمز لا يُحفظ على الجهاز؛ ينتهي عند إغلاق التطبيق أو قطع الاتصال.", size=11, color=MUTED)
+
+    async def start_github_login(e) -> None:
+        try:
+            client_id = (github_client_id.value or "").strip()
+            auth = await asyncio.to_thread(GitHubClient.start_device_authorization, client_id)
+            github_state["device"] = auth
+            github_state["client_id"] = client_id
+            github_device_info.value = (
+                f"افتح: {auth.verification_uri}\\n"
+                f"أدخل الرمز: {auth.user_code}\\n"
+                "بعد الموافقة اضغط «التحقق من تسجيل الدخول»."
+            )
+            github_status.value = "في انتظار موافقتك من صفحة GitHub."
+            github_status.color = ACCENT
+        except GitHubError as exc:
+            github_status.value = str(exc)
+            github_status.color = DANGER
+        page.update()
+
+    async def verify_github_login(e) -> None:
+        auth = github_state.get("device")
+        if auth is None:
+            github_status.value = "ابدأ تسجيل الدخول أولاً."
+            github_status.color = DANGER
+            page.update()
+            return
+        try:
+            token = await asyncio.to_thread(
+                GitHubClient.poll_device_authorization, github_state["client_id"], auth
+            )
+            if not token:
+                github_status.value = "لم تتم الموافقة بعد. أكمل الخطوات في GitHub ثم أعد المحاولة."
+                github_status.color = ACCENT
+            else:
+                client = GitHubClient(token)
+                user = await asyncio.to_thread(client.current_user)
+                old = github_state.get("client")
+                if old:
+                    old.clear()
+                github_state["client"] = client
+                github_state["device"] = None
+                github_status.value = f"تم الاتصال بالحساب @{user.get('login', 'GitHub')} بنجاح."
+                github_status.color = SUCCESS
+                github_device_info.value = "تم تسجيل الدخول. يمكنك الآن اختيار مستودع أو إنشاؤه."
+        except GitHubError as exc:
+            github_status.value = str(exc)
+            github_status.color = DANGER
+        page.update()
+
+    async def disconnect_github(e) -> None:
+        client = github_state.get("client")
+        if client:
+            client.clear()
+        github_state.update({"client": None, "device": None, "run_id": None})
+        github_status.value = "تم قطع الاتصال ومسح الرمز من ذاكرة التطبيق."
+        github_status.color = MUTED
+        github_device_info.value = "لم يتم ربط GitHub."
+        page.update()
+
+    async def list_github_repositories(e) -> None:
+        client = github_state.get("client")
+        if not client:
+            github_status.value = "سجّل الدخول إلى GitHub أولاً."
+            github_status.color = DANGER
+            page.update()
+            return
+        try:
+            repos = await asyncio.to_thread(client.list_repositories)
+            lines = [f"{item['full_name']}  ·  {'Private' if item.get('private') else 'Public'}"
+                     for item in repos[:80]]
+            output_text.value = "مستودعات GitHub المتاحة (حتى 80):\\n" + "\\n".join(lines)
+            output_text.color = TEXT
+            github_status.value = f"تم جلب {len(repos)} مستودعاً. اكتب owner/repository في الحقل."
+            github_status.color = SUCCESS
+            show_screen("terminal")
+        except GitHubError as exc:
+            github_status.value = str(exc)
+            github_status.color = DANGER
+        page.update()
+
+    async def create_github_repository(e) -> None:
+        client = github_state.get("client")
+        if not client:
+            github_status.value = "سجّل الدخول إلى GitHub أولاً."
+            github_status.color = DANGER
+            page.update()
+            return
+        name = (github_repository.value or "").strip()
+        if "/" in name or not name:
+            github_status.value = "عند إنشاء مستودع جديد اكتب الاسم فقط، دون owner/."
+            github_status.color = DANGER
+            page.update()
+            return
+        try:
+            created = await asyncio.to_thread(
+                client.create_repository, name, bool(github_private.value)
+            )
+            github_repository.value = created["full_name"]
+            github_branch.value = created.get("default_branch") or "main"
+            github_status.value = f"تم إنشاء المستودع {created['full_name']}."
+            github_status.color = SUCCESS
+        except GitHubError as exc:
+            github_status.value = str(exc)
+            github_status.color = DANGER
+        page.update()
+
+    def parse_github_repository():
+        value = (github_repository.value or "").strip().strip("/")
+        parts = value.split("/")
+        if len(parts) != 2 or any(not part or part in {".", ".."} for part in parts):
+            raise GitHubError("اكتب المستودع بالصيغة owner/repository.")
+        branch = (github_branch.value or "").strip()
+        if not branch or branch.startswith("-") or ".." in branch:
+            raise GitHubError("اسم الفرع غير صالح.")
+        return parts[0], parts[1], branch
+
+    async def upload_project_to_github(e) -> None:
+        client = github_state.get("client")
+        if not client:
+            github_status.value = "سجّل الدخول إلى GitHub أولاً."
+            github_status.color = DANGER
+            page.update()
+            return
+        try:
+            owner, repo_name, branch = parse_github_repository()
+            save_current_file()
+            archive = store.export_project_archive(active_project)
+            github_status.value = "جارٍ رفع ملفات المشروع إلى GitHub..."
+            github_status.color = ACCENT
+            page.update()
+            commit_sha = await asyncio.to_thread(
+                client.push_project_archive, owner, repo_name, branch, archive
+            )
+            github_state.update({"owner": owner, "repo": repo_name, "branch": branch})
+            github_status.value = f"تم رفع المشروع. Commit: {commit_sha[:10]}"
+            github_status.color = SUCCESS
+        except (GitHubError, WorkspaceError, OSError) as exc:
+            github_status.value = str(exc)
+            github_status.color = DANGER
+        page.update()
+
+    async def trigger_github_build(e) -> None:
+        client = github_state.get("client")
+        if not client:
+            github_status.value = "سجّل الدخول إلى GitHub أولاً."
+            github_status.color = DANGER
+            page.update()
+            return
+        try:
+            owner, repo_name, branch = parse_github_repository()
+            github_status.value = "جارٍ تشغيل GitHub Actions..."
+            github_status.color = ACCENT
+            page.update()
+            await asyncio.to_thread(
+                client.dispatch_workflow, owner, repo_name, "build-apk.yml", branch
+            )
+            github_state.update({"owner": owner, "repo": repo_name, "branch": branch})
+            github_status.value = "تم إرسال طلب البناء. انتظر قليلاً ثم اضغط متابعة البناء."
+            github_status.color = SUCCESS
+        except GitHubError as exc:
+            github_status.value = str(exc)
+            github_status.color = DANGER
+        page.update()
+
+    async def refresh_github_build(e) -> None:
+        client = github_state.get("client")
+        if not client:
+            github_status.value = "سجّل الدخول إلى GitHub أولاً."
+            github_status.color = DANGER
+            page.update()
+            return
+        try:
+            owner, repo_name, branch = parse_github_repository()
+            runs = await asyncio.to_thread(client.list_workflow_runs, owner, repo_name, branch, 5)
+            if not runs:
+                github_status.value = "لم يظهر بناء بعد. تأكد من وجود workflow باسم build-apk.yml."
+                github_status.color = MUTED
+            else:
+                run = runs[0]
+                github_state["run_id"] = run["id"]
+                jobs = await asyncio.to_thread(client.list_run_jobs, owner, repo_name, run["id"])
+                job_lines = []
+                for job in jobs:
+                    job_lines.append(f"{job.get('name')}: {job.get('status')} / {job.get('conclusion') or 'قيد التنفيذ'}")
+                    for step in job.get("steps", []):
+                        job_lines.append(f"  - {step.get('name')}: {step.get('conclusion') or step.get('status')}")
+                output_text.value = (
+                    f"GitHub Actions · Run #{run.get('run_number')}\\n"
+                    f"الحالة: {run.get('status')} · النتيجة: {run.get('conclusion') or 'لم تنته'}\\n"
+                    f"الرابط: {run.get('html_url')}\\n\\n" + "\\n".join(job_lines)
+                )
+                output_text.color = SUCCESS if run.get("conclusion") == "success" else (DANGER if run.get("conclusion") == "failure" else TEXT)
+                github_status.value = f"آخر بناء: {run.get('status')} / {run.get('conclusion') or 'قيد التنفيذ'}"
+                github_status.color = SUCCESS if run.get("conclusion") == "success" else (DANGER if run.get("conclusion") == "failure" else ACCENT)
+                show_screen("terminal")
+        except GitHubError as exc:
+            github_status.value = str(exc)
+            github_status.color = DANGER
+        page.update()
+
+    async def download_github_apk(e) -> None:
+        client = github_state.get("client")
+        run_id = github_state.get("run_id")
+        if not client or not run_id:
+            github_status.value = "حدّث حالة البناء أولاً بعد تسجيل الدخول."
+            github_status.color = DANGER
+            page.update()
+            return
+        try:
+            owner, repo_name, _ = parse_github_repository()
+            artifacts = await asyncio.to_thread(client.list_artifacts, owner, repo_name, run_id)
+            artifact = next((item for item in artifacts if not item.get("expired")), None)
+            if not artifact:
+                raise GitHubError("لا يوجد APK artifact صالح لهذا البناء.")
+            archive = await asyncio.to_thread(
+                client.download_artifact, owner, repo_name, artifact["id"]
+            )
+            path = await file_picker.save_file(
+                dialog_title="حفظ APK build artifact",
+                file_name=f"{repo_name}-apk.zip",
+                file_type=ft.FilePickerFileType.CUSTOM,
+                allowed_extensions=["zip"],
+                src_bytes=archive,
+            )
+            github_status.value = f"تم تنزيل أرشيف البناء إلى: {path}" if path else "تم تجهيز الأرشيف أو أُلغي الحفظ."
+            github_status.color = SUCCESS if path else MUTED
+        except (GitHubError, ValueError) as exc:
+            github_status.value = str(exc)
+            github_status.color = DANGER
+        page.update()
+
+    github_panel = make_panel(
+        ft.Column(controls=[
+            section_heading("GitHub والبناء السحابي", "ارفع مشروع Flet وشغّل بناء APK من الهاتف"),
+            github_client_id,
+            ft.Row(controls=[
+                ft.Button(content="بدء تسجيل الدخول", on_click=start_github_login, bgcolor=ACCENT, color="white"),
+                ft.Button(content="التحقق من تسجيل الدخول", on_click=verify_github_login),
+                ft.Button(content="قطع الاتصال", on_click=disconnect_github),
+            ], wrap=True, spacing=7),
+            github_device_info,
+            ft.Divider(color="#26354C", height=1),
+            github_repository,
+            github_branch,
+            github_private,
+            ft.Row(controls=[
+                ft.Button(content="عرض مستودعاتي", on_click=list_github_repositories),
+                ft.Button(content="إنشاء مستودع", on_click=create_github_repository),
+            ], wrap=True, spacing=7),
+            ft.Row(controls=[
+                ft.Button(content="رفع المشروع", on_click=upload_project_to_github, bgcolor=ACCENT, color="white"),
+                ft.Button(content="تشغيل البناء", on_click=trigger_github_build, bgcolor="#237A55", color="white"),
+            ], wrap=True, spacing=7),
+            ft.Row(controls=[
+                ft.Button(content="متابعة البناء والسجلات", on_click=refresh_github_build),
+                ft.Button(content="تنزيل APK", on_click=download_github_apk),
+            ], wrap=True, spacing=7),
+            github_status,
+            ft.Text(
+                "الأمان: Device Flow بنطاق repo وworkflow. الرمز مؤقت في الذاكرة ولا يُكتب إلى التخزين. "
+                "شغّل مشاريعك الموثوقة فقط؛ لا يمكن اعتبار تنفيذ كود المستخدم معزولاً أمنياً.",
+                size=10, color="#DDBB78",
+            ),
+        ], spacing=9)
+    )
+
     # Projects screen
     project_panel = make_panel(
         ft.Column(
@@ -1407,7 +1684,7 @@ def main(page: ft.Page) -> None:
         ("editor", "⌨", "المحرر"),
         ("tools", "⌕", "الأدوات"),
         ("packages", "◇", "الحزم"),
-        ("terminal", "▤", "النتائج"),
+        ("terminal", "▤", "النتائج"),\n        ("github", "◈", "GitHub"),
     ]
     active_screen = {"name": "editor"}
 
