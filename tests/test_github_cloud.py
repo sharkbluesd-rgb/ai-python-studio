@@ -13,6 +13,7 @@ from github_cloud import (
     _oauth_request,
     validate_branch,
     validate_repository,
+    select_dispatched_run,
 )
 
 
@@ -135,7 +136,6 @@ class GitHubCloudTests(unittest.TestCase):
             {"id": 10, "event": "workflow_dispatch", "conclusion": "success"},
         ]
         selected = select_dispatched_run(runs, {10, 11})
-        self.assertEqual(selected["id"], 12) if False else None
         self.assertIsNone(selected)
         runs.insert(0, {"id": 13, "event": "workflow_dispatch", "status": "queued"})
         self.assertEqual(select_dispatched_run(runs, {10, 11})["id"], 13)
