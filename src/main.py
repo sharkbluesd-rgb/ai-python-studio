@@ -1046,6 +1046,65 @@ def main(page: ft.Page) -> None:
         border=ft.Border.only(bottom=ft.BorderSide(1, "#243147")),
     )
 
+    # Android app configuration (used by the Flet Android project template).
+    android_app_name = ft.TextField(label="اسم التطبيق", value="My Android App", text_size=13)
+    android_package_id = ft.TextField(label="معرّف التطبيق Android", value="com.example.myandroidapp", text_size=13)
+    android_version = ft.TextField(label="الإصدار", value="0.1.0", text_size=13)
+    android_build_number = ft.TextField(label="رقم البناء", value="1", text_size=13)
+    android_config_status = ft.Text("هذه الإعدادات تطبق على مشاريع Flet Android التي تحتوي pyproject.toml.", size=11, color=MUTED)
+
+    def save_android_configuration(e) -> None:
+        from flet_project import configure_flet_project, validate_flet_project
+        try:
+            save_current_file()
+            project_path = store._project_dir(active_project)
+            result = configure_flet_project(
+                project_path,
+                app_name=android_app_name.value or "",
+                application_id=android_package_id.value or "",
+                version=android_version.value or "",
+                build_number=android_build_number.value or "",
+            )
+            android_config_status.value = "تم حفظ إعدادات Android بنجاح. " + result
+            android_config_status.color = SUCCESS
+            set_status("تم تحديث إعدادات تطبيق Android.", SUCCESS)
+        except (ValueError, OSError) as exc:
+            android_config_status.value = str(exc)
+            android_config_status.color = DANGER
+            set_status("تعذر حفظ إعدادات Android.", DANGER)
+        page.update()
+
+    def validate_android_project(e) -> None:
+        from flet_project import validate_flet_project
+        try:
+            issues = validate_flet_project(store._project_dir(active_project))
+            if issues:
+                android_config_status.value = "مشكلات يجب إصلاحها قبل البناء:\\n• " + "\\n• ".join(issues)
+                android_config_status.color = DANGER
+                set_status("فشل فحص مشروع Android قبل البناء.", DANGER)
+            else:
+                android_config_status.value = "المشروع جاهز مبدئياً للبناء السحابي. راجع إعدادات GitHub Actions."
+                android_config_status.color = SUCCESS
+                set_status("اجتاز المشروع فحص ما قبل البناء.", SUCCESS)
+        except OSError as exc:
+            android_config_status.value = str(exc)
+            android_config_status.color = DANGER
+        page.update()
+
+    android_config_panel = make_panel(
+        ft.Column(controls=[
+            section_heading("إعداد تطبيق Android", "اسم التطبيق ومعرّف الحزمة والإصدار قبل إنشاء APK"),
+            android_app_name,
+            android_package_id,
+            ft.Row(controls=[android_version, android_build_number], spacing=8),
+            ft.Row(controls=[
+                ft.Button(content="حفظ الإعدادات", on_click=save_android_configuration, bgcolor=ACCENT, color="white"),
+                ft.Button(content="فحص قبل البناء", on_click=validate_android_project),
+            ], wrap=True, spacing=8),
+            android_config_status,
+        ], spacing=9)
+    )
+
     # Projects screen
     project_panel = make_panel(
         ft.Column(
@@ -1320,7 +1379,7 @@ def main(page: ft.Page) -> None:
     # Independent screens, switched without destroying editor/project state.
     screens = {
         "projects": ft.Column(
-            controls=[project_panel, project_welcome, safety_note],
+            controls=[project_panel, android_config_panel, project_welcome, safety_note],
             spacing=12, scroll=ft.ScrollMode.AUTO, expand=True,
         ),
         "editor": ft.Column(
