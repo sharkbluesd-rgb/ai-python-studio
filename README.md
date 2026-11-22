@@ -10,6 +10,7 @@ A mobile-first Python development workspace built with Flet for Android.
 - Create nested folders; create, rename, duplicate and delete source files.
 - Search across project text files, replace in the current file, and preview/apply exact replacements across the whole project.
 - Offline templates for Python, automation, CLI tools, Flet apps and unit-test projects.
+- Dedicated Flet Android App template with a complete project manifest and GitHub Actions APK workflow.
 - ZIP project import/export with path traversal, symlink and size checks; common image assets are retained.
 - Python syntax checking without executing the script.
 - Offline project analysis: code metrics, severity totals and an indicative quality score.

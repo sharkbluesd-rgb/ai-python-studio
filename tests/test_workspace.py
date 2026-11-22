@@ -32,6 +32,14 @@ class WorkspaceStoreTests(unittest.TestCase):
         self.assertNotEqual(new_id, self.project_id)
         self.assertEqual(self.store.list_files(new_id), ["main.py"])
 
+    def test_flet_android_template_has_cloud_build_files(self):
+        files = TEMPLATES["Flet Android App"]
+        self.assertIn("flet==1.1.2", files["pyproject.toml"])
+        self.assertIn("flet-dev/flet-build-action@v1", files[".github/workflows/build-apk.yml"])
+        project_id = self.store.create_project_from_template("Android Demo", files)
+        self.assertIn("src/main.py", self.store.list_files(project_id))
+        self.assertIn(".github/workflows/build-apk.yml", self.store.list_files(project_id))
+
     def test_template_file_limit_counts_generated_default_file(self):
         files = {
             f"module_{index}.py": "pass\n"
