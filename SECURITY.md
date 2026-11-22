@@ -24,3 +24,5 @@ Report security issues privately to the repository maintainer. Do not publish se
 - Never run untrusted scripts or install untrusted packages. Do not treat session disconnection or cooperative timeouts as a security boundary.
 - Project uploads reject traversal, links and special files, environment files, duplicate paths, encrypted entries, oversized files, and oversized projects. Artifact redirects are followed without forwarding the OAuth Authorization header to the storage host.
 - APK installation has not been tested on every Android device. Verify artifacts on a trusted device before distribution.
+
+- Before upload, a heuristic scanner blocks common GitHub/AWS token patterns, private-key headers, and long literal assignments to secret-like variable names. This is a safety net, not a complete secret scanner; manually review every project before upload.

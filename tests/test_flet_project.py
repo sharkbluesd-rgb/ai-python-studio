@@ -17,9 +17,10 @@ class FletProjectConfigurationTests(unittest.TestCase):
             encoding="utf-8",
         )
         (root / ".github" / "workflows" / "build-apk.yml").write_text(
-            "steps:\n  - name: Build APK\n    with:\n"
-            "      build-version: '0.1.0'\n      build-number: 1\n"
-            "      uses: flet-dev/flet-build-action@v1\n",
+            "on:\n  workflow_dispatch:\nsteps:\n  - name: Build APK\n    with:\n"
+            "      target: apk\n      build-version: '0.1.0'\n      build-number: 1\n"
+            "      uses: flet-dev/flet-build-action@v1\n"
+            "  - uses: actions/upload-artifact@v4\n",
             encoding="utf-8",
         )
         return root
@@ -59,6 +60,15 @@ class FletProjectConfigurationTests(unittest.TestCase):
                     version="latest", build_number="0",
                 )
             self.assertEqual((root / "pyproject.toml").read_text(encoding="utf-8"), original)
+
+    def test_prebuild_requires_manual_dispatch_and_apk_artifact(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = self.make_project(Path(temp))
+            workflow_path = root / ".github" / "workflows" / "build-apk.yml"
+            original = workflow_path.read_text(encoding="utf-8")
+            workflow_path.write_text(original.replace("  workflow_dispatch:\\n", ""), encoding="utf-8")
+            issues = validate_flet_project(root)
+            self.assertTrue(any("workflow_dispatch" in issue for issue in issues))
 
     def test_prebuild_validation_reports_missing_files(self):
         with tempfile.TemporaryDirectory() as temp:

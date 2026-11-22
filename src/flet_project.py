@@ -113,6 +113,15 @@ def validate_flet_project(project_path: str | Path) -> list[str]:
     workflow = root / ".github" / "workflows" / "build-apk.yml"
     if not workflow.is_file():
         issues.append("ملف GitHub Actions لبناء APK غير موجود.")
-    elif "flet-dev/flet-build-action" not in workflow.read_text(encoding="utf-8"):
-        issues.append("إعداد بناء Flet غير موجود في workflow.")
+    else:
+        workflow_content = workflow.read_text(encoding="utf-8")
+        workflow_checks = {
+            "إعداد بناء Flet غير موجود في workflow.": "flet-dev/flet-build-action",
+            "يجب أن يدعم workflow التشغيل اليدوي workflow_dispatch.": "workflow_dispatch:",
+            "يجب أن يحدد workflow هدف APK.": "target: apk",
+            "يجب أن يرفع workflow ملف البناء كـ artifact.": "actions/upload-artifact",
+        }
+        for message, required_text in workflow_checks.items():
+            if required_text not in workflow_content:
+                issues.append(message)
     return issues

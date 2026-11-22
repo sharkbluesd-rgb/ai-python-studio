@@ -22,7 +22,8 @@ A mobile-first Python development workspace built with Flet for Android.
 - In-app unittest discovery for the active project's tests folder, including a 180-second cooperative execution limit.
 - GitHub Device Flow sign-in, repository listing and selection, repository creation, project upload, Actions dispatch, job status/logs, and APK artifact download.
 - GitHub sessions are held in memory only and automatically disconnected before running Python scripts, project tests, or installing third-party packages.
-- Pre-build validation for Android Flet projects; APK download is allowed only after a successful run and APK structure verification.
+- Pre-build validation for Android Flet projects, including manual workflow dispatch and artifact upload; APK download is allowed only after a successful run and APK structure verification.
+- Upload guard that blocks common GitHub/AWS token patterns, private-key headers, secret-like assignments, and environment files.
 
 ## Development
 
@@ -50,7 +51,7 @@ The current local runner executes code with exec() inside the app process. It is
 
 ## Deliberate limitations in this release
 
-The project does not yet bundle a separate Python distribution or a general-purpose `pip` environment for Android. The `requirements.txt` tool edits the manifest only; it does not install packages. Package installation depends on Android-compatible wheels and is not exposed as a one-tap feature. AI providers, a native shell terminal, and an interactive debugger are not included in this release. The GitHub integration requires a GitHub OAuth App with Device Flow enabled and requests repo and workflow scopes to update files and run Actions. These scopes are broad; review the permissions on GitHub before authorizing.
+The project does not yet bundle a separate Python distribution or a general-purpose `pip` environment for Android. The package manager installs requested packages into the Python interpreter used by the app; compatibility depends on Android-compatible wheels and successful native imports. Installing a package does not guarantee that its dependencies support Android. AI providers, a native shell terminal, and an interactive debugger are not included in this release. The GitHub integration requires a GitHub OAuth App with Device Flow enabled and requests repo and workflow scopes to update files and run Actions. These scopes are broad; review the permissions on GitHub before authorizing.
 
 
 ## GitHub setup
