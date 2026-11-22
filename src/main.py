@@ -633,7 +633,7 @@ def main(page: ft.Page) -> None:
                 was_truncated = True
             output_text.value = streamed_text
             if was_truncated:
-                output_text.value += "\\n\\n[تم اختصار الإخراج لطوله الكبير]"
+                output_text.value += "\n\n[تم اختصار الإخراج لطوله الكبير]"
             page.update()
 
         try:
@@ -666,7 +666,7 @@ def main(page: ft.Page) -> None:
             if not streamed_text:
                 output_text.value = result[:OUTPUT_LIMIT]
                 if len(result) > OUTPUT_LIMIT:
-                    output_text.value += "\\n\\n[تم اختصار الإخراج لطوله الكبير]"
+                    output_text.value += "\n\n[تم اختصار الإخراج لطوله الكبير]"
             output_text.color = SUCCESS if succeeded else DANGER
 
             elapsed = time.monotonic() - started_at
@@ -856,8 +856,8 @@ def main(page: ft.Page) -> None:
         show_screen("terminal")
         try:
             packages = list_installed()
-            output_text.value = "المكتبات المثبتة ({})\\n".format(len(packages))
-            output_text.value += "\\n".join(
+            output_text.value = "المكتبات المثبتة ({})\n".format(len(packages))
+            output_text.value += "\n".join(
                 f"{name}  —  {version}" for name, version in packages
             )
             output_text.color = TEXT

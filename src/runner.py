@@ -34,6 +34,7 @@ class ExecutionControl:
     """Cooperative cancellation and timeout for Python execution."""
 
     def __init__(self, timeout_seconds: float | None = 60):
+        self.timeout_seconds = timeout_seconds
         self._cancelled = threading.Event()
         self._deadline = (
             time.monotonic() + timeout_seconds
@@ -172,7 +173,7 @@ def execute_python(
     valid, syntax_message = check_python(code, file_path)
     if not valid:
         if output_callback is not None:
-            output_callback(syntax_message + "\\n")
+            output_callback(syntax_message + "\n")
         return syntax_message, False
 
     stdout = _OutputCapture(output_callback)
@@ -217,7 +218,9 @@ def execute_python(
         except ExecutionCancelled:
             return "تم إيقاف التنفيذ بطلب المستخدم.", False
         except ExecutionTimedOut:
-            return "انتهت مهلة التنفيذ (60 ثانية).", False
+            if control is None or control.timeout_seconds is None:
+                return "انتهت مهلة التنفيذ.", False
+            return f"انتهت مهلة التنفيذ ({control.timeout_seconds:g} ثانية).", False
         except BaseException:
             output = stdout.getvalue()
             error_output = stderr.getvalue()

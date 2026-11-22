@@ -150,6 +150,18 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(sys.path, before_path)
             self.assertEqual(sys.argv, before_argv)
 
+    def test_syntax_error_callback_ends_with_real_newline(self):
+        chunks = []
+        with tempfile.TemporaryDirectory() as directory:
+            result, success = execute_python(
+                "def broken(:",
+                str(Path(directory) / "broken.py"),
+                output_callback=chunks.append,
+            )
+        self.assertFalse(success)
+        self.assertEqual(chunks, [result + "\n"])
+        self.assertFalse(chunks[0].endswith("\\n"))
+
     def test_syntax_checker_accepts_valid_source(self):
         valid, message = check_python("print('ok')", "main.py")
         self.assertTrue(valid)
@@ -220,6 +232,7 @@ class ExecutionControlTests(unittest.TestCase):
             )
         self.assertFalse(success)
         self.assertIn("انتهت مهلة التنفيذ", result)
+        self.assertIn("0.05 ثانية", result)
 
     def test_normal_execution_still_works_with_control(self):
         control = ExecutionControl(timeout_seconds=5)
