@@ -16,8 +16,8 @@ A mobile-first Python development workspace built with Flet for Android.
 - Static diagnostics for hard-coded-secret patterns, dynamic execution, shell usage, pickle/YAML hazards, mutable defaults, ignored exceptions, wildcard imports, HTTP calls without timeouts and TODO markers.
 - Project report displayed in the diagnostics panel; static analysis never imports or executes project code.
 - Run, search, syntax, package and analysis actions navigate to the results screen automatically.
-- Requirements manifest editor for maintaining `requirements.txt` (does not install packages).
-- Local trusted-code execution with captured output and tracebacks.
+- Python package manager with individual package installation, requirements installation and installed-package listing; compatibility depends on Android wheels.
+- Local trusted-code execution with captured output and tracebacks; relative file access starts at the active project root and the app working directory is restored afterwards.
 - GitHub Actions tests and Android APK builds on `main` and `feature/**` branches.
 
 ## Development
@@ -42,7 +42,7 @@ Push to `main` or a `feature/**` branch, or start the `Build AI Python Studio AP
 
 ## Important execution warning
 
-The current local runner executes code with `exec()` inside the app process. It is intended only for code the device owner trusts. It is **not** a security sandbox, cannot safely contain malicious code, and does not provide a reliable hard timeout for infinite loops. Do not use it to run unknown code from other people.
+The current local runner executes code with exec() inside the app process. It is intended only for code the device owner trusts. It is not a security sandbox. Cancellation checks Python line events but cannot reliably interrupt native extensions, blocking I/O, or every third-party call. Do not use it to run unknown code from other people.
 
 ## Deliberate limitations in this release
 

@@ -8,6 +8,36 @@ from runner import ExecutionControl, check_python, execute_python
 
 
 class RunnerTests(unittest.TestCase):
+
+    def test_relative_file_io_uses_project_root_and_restores_cwd(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory) / "project"
+            (project / "src").mkdir(parents=True)
+            (project / "notes.txt").write_text("project data", encoding="utf-8")
+            script = project / "src" / "main.py"
+            original_cwd = Path.cwd()
+            result, success = execute_python(
+                "with open('notes.txt', encoding='utf-8') as stream:\n"
+                "    print(stream.read())\n",
+                str(script),
+                str(project),
+            )
+            self.assertEqual(Path.cwd(), original_cwd)
+        self.assertTrue(success)
+        self.assertEqual(result.strip(), "project data")
+
+    def test_working_directory_is_restored_after_script_error(self):
+        with tempfile.TemporaryDirectory() as directory:
+            original_cwd = Path.cwd()
+            result, success = execute_python(
+                "raise RuntimeError('failure')",
+                str(Path(directory) / "main.py"),
+                directory,
+            )
+            self.assertEqual(Path.cwd(), original_cwd)
+        self.assertFalse(success)
+        self.assertIn("RuntimeError: failure", result)
+
     def test_captures_printed_output(self):
         with tempfile.TemporaryDirectory() as directory:
             script = Path(directory) / "main.py"

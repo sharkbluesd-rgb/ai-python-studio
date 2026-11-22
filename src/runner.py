@@ -1,7 +1,8 @@
 """Local Python runner for trusted scripts, plus static syntax validation.
 
-IMPORTANT: execution uses ``exec`` in the app process. This is not a sandbox,
-not safe for untrusted code, and cannot reliably stop an infinite loop.
+IMPORTANT: execution uses ``exec`` in the app process. This is not a sandbox
+and is not safe for untrusted code. Cancellation is cooperative: Python line
+events are checked, but native extensions and blocking calls may not stop.
 """
 
 from __future__ import annotations
@@ -9,6 +10,7 @@ from __future__ import annotations
 import ast
 import contextlib
 import io
+import os
 import sys
 import threading
 import traceback
@@ -92,8 +94,10 @@ def execute_python(
 ) -> tuple[str, bool]:
     """Run a trusted script and return ``(captured_output, succeeded)``.
 
-    This serializes app executions because stdout/stderr redirection and
-    ``sys.path`` are process-global. It does not sandbox or time-limit code.
+    This serializes app executions because stdout/stderr redirection,
+    ``sys.path`` and the working directory are process-global. It does not
+    sandbox code. Cancellation checks Python line events but may not interrupt
+    native extensions or blocking third-party calls.
     """
     valid, syntax_message = check_python(code, file_path)
     if not valid:
@@ -117,6 +121,7 @@ def execute_python(
         original_argv = sys.argv[:]
         original_sys_path = sys.path[:]
         original_trace = sys.gettrace()
+        original_cwd = os.getcwd()
 
         def execution_trace(frame, event, arg):
             if control is not None and event == "line":
@@ -124,6 +129,7 @@ def execute_python(
             return execution_trace
 
         try:
+            os.chdir(project_dir)
             for candidate in (project_dir, script_dir):
                 if candidate not in sys.path:
                     sys.path.insert(0, candidate)
@@ -157,6 +163,12 @@ def execute_python(
             combined += ("\n" if combined else "") + details
             return combined, False
         finally:
+            try:
+                os.chdir(original_cwd)
+            except OSError:
+                # Do not mask the original script result if the old folder
+                # was removed by trusted project code while it was running.
+                pass
             sys.settrace(original_trace)
             sys.argv = original_argv
             sys.path[:] = original_sys_path
