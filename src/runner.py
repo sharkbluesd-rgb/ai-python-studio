@@ -97,11 +97,17 @@ def execute_unittest_discovery(
     Only relative test directories are accepted. Test code is still trusted
     code and runs in the app process through the same cooperative controls.
     """
-    from pathlib import PurePath
+    from pathlib import PurePosixPath
 
-    relative = PurePath(tests_dir)
-    if relative.is_absolute() or not relative.parts or any(
-        part in {"", ".", ".."} for part in relative.parts
+    if not isinstance(tests_dir, str) or not tests_dir.strip():
+        return "مسار مجلد الاختبارات غير صالح.", False
+    normalized_dir = tests_dir.strip().replace("\\", "/")
+    relative = PurePosixPath(normalized_dir)
+    if (
+        relative.is_absolute()
+        or not relative.parts
+        or relative.parts[0].endswith(":")
+        or any(part in {"", ".", ".."} for part in relative.parts)
     ):
         return "مسار مجلد الاختبارات غير صالح.", False
     if not isinstance(pattern, str) or not pattern or "/" in pattern or "\\" in pattern:

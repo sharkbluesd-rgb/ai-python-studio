@@ -70,6 +70,30 @@ class RunnerTests(unittest.TestCase):
         self.assertFalse(success)
         self.assertIn("لم يتم العثور", output)
 
+    def test_rejects_windows_test_directory_path(self):
+        from runner import execute_unittest_discovery
+        output, success = execute_unittest_discovery(".", r"..\\outside")
+        self.assertFalse(success)
+        self.assertIn("غير صالح", output)
+
+    def test_failing_unittest_suite_returns_failure(self):
+        from runner import execute_unittest_discovery
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            test_dir = project / "tests"
+            test_dir.mkdir()
+            (test_dir / "test_failure.py").write_text(
+                "import unittest\n"
+                "class FailingTests(unittest.TestCase):\n"
+                "    def test_failure(self):\n"
+                "        self.assertEqual(1, 2)\n",
+                encoding="utf-8",
+            )
+            output, success = execute_unittest_discovery(str(project))
+        self.assertFalse(success)
+        self.assertIn("FAILED", output)
+        self.assertIn("test_failure", output)
+
     def test_captures_printed_output(self):
         with tempfile.TemporaryDirectory() as directory:
             script = Path(directory) / "main.py"
