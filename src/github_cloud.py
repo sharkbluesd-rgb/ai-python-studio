@@ -17,7 +17,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import zipfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import PurePosixPath
 from typing import Any
 
@@ -26,6 +26,12 @@ API = "https://api.github.com"
 DEVICE_URL = "https://github.com/login/device/code"
 TOKEN_URL = "https://github.com/login/oauth/access_token"
 USER_AGENT = "AI-Python-Studio"
+_SECRET_ASSIGNMENT = re.compile(
+    r"""(?i)\b(?:api[_-]?key|client[_-]?secret|password|passwd|access[_-]?token|refresh[_-]?token|github[_-]?token)\b\s*[:=]\s*(['"])[^'"]{20,}['"]"""
+)
+_GITHUB_TOKEN = re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})\b")
+_AWS_KEY = re.compile(r"\bAKIA[0-9A-Z]{16}\b")
+_PRIVATE_KEY = re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----")
 MAX_ARCHIVE_BYTES = 24 * 1024 * 1024
 MAX_PROJECT_BYTES = 24 * 1024 * 1024
 MAX_FILE_BYTES = 512 * 1024
@@ -104,6 +110,20 @@ def _oauth_request(url: str, data: dict[str, str]) -> Any:
     return _read_json_response(request)
 
 
+def _potential_secret(content: bytes) -> str | None:
+    """Return only the secret category; never include matching values in errors."""
+    sample = content.decode("utf-8", "ignore")
+    if _PRIVATE_KEY.search(sample):
+        return "مفتاح خاص"
+    if _GITHUB_TOKEN.search(sample):
+        return "رمز وصول GitHub"
+    if _AWS_KEY.search(sample):
+        return "مفتاح AWS"
+    if _SECRET_ASSIGNMENT.search(sample):
+        return "قيمة سرية ضمن إعداد أو متغير"
+    return None
+
+
 def validate_repository(owner: str, repo: str) -> tuple[str, str]:
     owner = (owner or "").strip()
     repo = (repo or "").strip()
@@ -177,13 +197,13 @@ def _download_redirect_safely(url: str, *, token: str | None, max_bytes: int, ti
 
 @dataclass
 class DeviceAuthorization:
-    device_code: str
-    user_code: str
+    device_code: str = field(repr=False)
+    user_code: str = field(repr=False)
     verification_uri: str
     interval: int
     expires_in: int
-    created_at: float
-    last_poll_at: float | None = None
+    created_at: float = field(repr=False)
+    last_poll_at: float | None = field(default=None, repr=False)
 
 
 class GitHubClient:
@@ -208,7 +228,16 @@ class GitHubClient:
             raise GitHubError(data.get("error_description") or "تعذر بدء تسجيل دخول GitHub.")
         verification_uri = data["verification_uri"]
         parsed = urllib.parse.urlsplit(verification_uri)
-        if parsed.scheme != "https" or parsed.hostname != "github.com" or parsed.path.rstrip("/") != "/login/device":
+        try:
+            invalid_verification_uri = (
+                parsed.scheme != "https" or parsed.hostname != "github.com"
+                or parsed.path.rstrip("/") != "/login/device"
+                or parsed.username is not None or parsed.password is not None
+                or parsed.port not in (None, 443) or parsed.query or parsed.fragment
+            )
+        except ValueError:
+            invalid_verification_uri = True
+        if invalid_verification_uri:
             raise GitHubError("أعاد GitHub رابط تحقق غير متوقع.")
         try:
             interval = max(5, int(data.get("interval", 5)))
@@ -366,6 +395,12 @@ class GitHubClient:
                         raise GitHubError(f"تعذر قراءة الملف {name} داخل الأرشيف.") from exc
                     if len(raw) != item.file_size or len(raw) > MAX_FILE_BYTES:
                         raise GitHubError(f"حجم الملف {name} داخل الأرشيف غير متطابق.")
+                    secret_type = _potential_secret(raw)
+                    if secret_type:
+                        raise GitHubError(
+                            f"أوقف رفع الملف {name}: قد يحتوي على {secret_type}. "
+                            "أزل الأسرار واستبدلها بمتغيرات بيئة قبل الرفع."
+                        )
                     files[name] = raw
         except GitHubError:
             raise
@@ -421,11 +456,17 @@ class GitHubClient:
             method="POST", data={"ref": branch},
         )
 
-    def list_workflow_runs(self, owner: str, repo: str, branch: str, per_page: int = 5) -> list[dict]:
+    def list_workflow_runs(
+        self, owner: str, repo: str, branch: str, per_page: int = 5,
+        workflow: str = "build-apk.yml",
+    ) -> list[dict]:
         base = _repo_path(owner, repo)
         branch = validate_branch(branch)
+        if not re.fullmatch(r"[A-Za-z0-9_.-]{1,100}\.ya?ml", workflow or "") or ".." in workflow:
+            raise GitHubError("اسم ملف workflow غير صالح.")
         query = urllib.parse.urlencode({"branch": branch, "per_page": min(max(int(per_page), 1), 20)})
-        result = self.request(f"{base}/actions/runs?{query}")
+        endpoint = urllib.parse.quote(workflow, safe="")
+        result = self.request(f"{base}/actions/workflows/{endpoint}/runs?{query}")
         return result["workflow_runs"]
 
     def get_workflow_run(self, owner: str, repo: str, run_id: int) -> dict:

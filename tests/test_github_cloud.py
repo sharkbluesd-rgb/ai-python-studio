@@ -1,5 +1,6 @@
 import io
 import stat
+import time
 import unittest
 import urllib.parse
 import zipfile
@@ -118,6 +119,29 @@ class GitHubCloudTests(unittest.TestCase):
         with patch.object(self.client, "request", side_effect=AssertionError("network should not be called")):
             with self.assertRaises(GitHubError):
                 self.client.push_project_archive("owner", "repo", "main", buffer.getvalue())
+
+    def test_secret_assignments_are_blocked_before_upload(self):
+        secret = 'github_token = "github_pat_' + "A" * 30 + '"'
+        archive = self.make_zip([("settings.py", secret)])
+        with patch.object(self.client, "request", side_effect=AssertionError("network should not be called")):
+            with self.assertRaisesRegex(GitHubError, "رمز وصول GitHub"):
+                self.client.push_project_archive("owner", "repo", "main", archive)
+
+    def test_workflow_runs_are_scoped_to_android_workflow(self):
+        with patch.object(self.client, "request", return_value={"workflow_runs": []}) as request:
+            self.client.list_workflow_runs("owner", "repo", "main")
+        self.assertIn("/actions/workflows/build-apk.yml/runs?", request.call_args.args[0])
+
+    def test_polling_respects_minimum_device_interval(self):
+        auth = DeviceAuthorization(
+            device_code="hidden", user_code="hidden",
+            verification_uri="https://github.com/login/device",
+            interval=5, expires_in=600, created_at=time.monotonic(),
+            last_poll_at=time.monotonic(),
+        )
+        with patch("github_cloud._oauth_request", side_effect=AssertionError("must wait")):
+            with self.assertRaisesRegex(GitHubError, "انتظر"):
+                GitHubClient.poll_device_authorization("client-id", auth)
 
     def test_extract_apk_requires_real_android_package(self):
         inner = io.BytesIO()
