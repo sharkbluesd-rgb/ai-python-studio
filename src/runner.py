@@ -160,6 +160,7 @@ def execute_python(
     project_root: str | None = None,
     output_callback: Callable[[str], None] | None = None,
     control: ExecutionControl | None = None,
+    script_args: list[str] | tuple[str, ...] | None = None,
 ) -> tuple[str, bool]:
     """Run a trusted script and return ``(captured_output, succeeded)``.
 
@@ -203,7 +204,7 @@ def execute_python(
                 if candidate not in sys.path:
                     sys.path.insert(0, candidate)
                     added_paths.append(candidate)
-            sys.argv = [str(script_path)]
+            sys.argv = [str(script_path), *(str(arg) for arg in (script_args or []))]
             if control is not None:
                 sys.settrace(execution_trace)
             with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):

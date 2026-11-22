@@ -17,7 +17,7 @@ A mobile-first Python development workspace built with Flet for Android.
 - Project report displayed in the diagnostics panel; static analysis never imports or executes project code.
 - Run, search, syntax, package and analysis actions navigate to the results screen automatically.
 - Python package manager with individual package installation, requirements installation and installed-package listing; compatibility depends on Android wheels.
-- Local trusted-code execution with captured output and tracebacks; relative file access starts at the active project root and the app working directory is restored afterwards.
+- Local trusted-code execution with captured output and tracebacks; relative file access starts at the active project root and the app working directory is restored afterwards. Optional command-line arguments are supported.
 - In-app unittest discovery for the active project's tests folder, including a 180-second cooperative execution limit.
 - GitHub Actions tests and Android APK builds on `main` and `feature/**` branches.
 

@@ -94,6 +94,19 @@ class RunnerTests(unittest.TestCase):
         self.assertIn("FAILED", output)
         self.assertIn("test_failure", output)
 
+    def test_passes_script_arguments_and_restores_argv(self):
+        with tempfile.TemporaryDirectory() as directory:
+            before = list(sys.argv)
+            script = Path(directory) / "main.py"
+            result, success = execute_python(
+                "import sys\nprint('|'.join(sys.argv[1:]))",
+                str(script),
+                script_args=["input.csv", "--verbose", "two words"],
+            )
+            self.assertEqual(sys.argv, before)
+        self.assertTrue(success)
+        self.assertEqual(result.strip(), "input.csv|--verbose|two words")
+
     def test_captures_printed_output(self):
         with tempfile.TemporaryDirectory() as directory:
             script = Path(directory) / "main.py"

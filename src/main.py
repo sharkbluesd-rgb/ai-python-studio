@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import shlex
 import time
 from pathlib import Path, PurePosixPath
 
@@ -124,6 +125,10 @@ def main(page: ft.Page) -> None:
     replace_apply_button = ft.Button(content="تطبيق الاستبدال", disabled=True)
 
     package_name_input = ft.TextField(hint_text="اسم المكتبة، مثال: requests", text_size=13, expand=True)
+    script_args_input = ft.TextField(
+        hint_text="وسائط التشغيل (اختياري): input.csv --verbose",
+        text_size=12, dense=True, expand=True,
+    )
     package_state = {"busy": False}
     run_button = ft.Button(content="تشغيل Python", bgcolor="#237A55", color="white")
     test_button = ft.Button(content="اختبارات المشروع", bgcolor="#34466B", color="white")
@@ -596,6 +601,18 @@ def main(page: ft.Page) -> None:
         page.update()
 
         code_snapshot = current_code()
+        try:
+            script_args = shlex.split(script_args_input.value or "", posix=True)
+        except ValueError as exc:
+            run_state["running"] = False
+            run_state["control"] = None
+            run_button.disabled = False
+            stop_button.disabled = True
+            output_text.value = f"وسائط التشغيل غير صحيحة: {exc}"
+            output_text.color = DANGER
+            set_status("راجع علامات الاقتباس في وسائط التشغيل.", DANGER)
+            page.update()
+            return
         file_path = str(store.root / "projects" / active_project / active_file)
         project_path = str(store.root / "projects" / active_project)
         output_queue = asyncio.Queue()
@@ -628,6 +645,7 @@ def main(page: ft.Page) -> None:
                     project_path,
                     emit_output,
                     run_state["control"],
+                    script_args,
                 )
             )
 
@@ -1073,6 +1091,7 @@ def main(page: ft.Page) -> None:
     # Editor screen: code comes first; file operations stay below it.
     toolbar = ft.Row(
         controls=[
+            script_args_input,
             run_button,
             test_button,
             stop_button,
