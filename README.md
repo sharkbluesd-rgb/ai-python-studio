@@ -12,8 +12,10 @@ A mobile-first Python development workspace built with Flet for Android.
 - Offline templates for Python, automation, CLI tools, Flet apps and unit-test projects.
 - ZIP project import/export with path traversal, symlink and size checks; common image assets are retained.
 - Python syntax checking without executing the script.
-- Offline project analysis: Python file/line/function/class metrics, TODO counts and heuristic security checks.
+- Offline project analysis: code metrics, severity totals and an indicative quality score.
+- Static diagnostics for hard-coded-secret patterns, dynamic execution, shell usage, pickle/YAML hazards, mutable defaults, ignored exceptions, wildcard imports, HTTP calls without timeouts and TODO markers.
 - Project report displayed in the diagnostics panel; static analysis never imports or executes project code.
+- Run, search, syntax, package and analysis actions navigate to the results screen automatically.
 - Requirements manifest editor for maintaining `requirements.txt` (does not install packages).
 - Local trusted-code execution with captured output and tracebacks.
 - GitHub Actions tests and Android APK builds on `main` and `feature/**` branches.

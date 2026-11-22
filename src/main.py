@@ -515,6 +515,7 @@ def main(page: ft.Page) -> None:
         page.update()
 
     async def run_code(e) -> None:
+        show_screen("terminal")
         if run_state["running"]:
             return
         if Path(active_file).suffix.lower() not in {".py", ".pyw"}:
@@ -627,6 +628,7 @@ def main(page: ft.Page) -> None:
             page.update()
 
     def analyze_current_project(e) -> None:
+        show_screen("terminal")
         try:
             save_current_file()
             report = inspect_project(store, active_project)
@@ -644,6 +646,7 @@ def main(page: ft.Page) -> None:
         page.update()
 
     def preview_project_replace(e) -> None:
+        show_screen("terminal")
         try:
             save_current_file()
             find_text = project_replace_find.value or ""
@@ -676,6 +679,7 @@ def main(page: ft.Page) -> None:
         page.update()
 
     def apply_project_replace(e) -> None:
+        show_screen("terminal")
         try:
             find_text = replace_preview_state["find"]
             replacement = replace_preview_state["replacement"]
@@ -716,11 +720,13 @@ def main(page: ft.Page) -> None:
             refresh_file_buttons()
             refresh_project_summary()
             set_status("تم فتح ملف الاعتماديات. أضف أسماء الحزم المتوافقة مع Android يدوياً.", SUCCESS)
+            show_screen("editor")
         except WorkspaceError as exc:
             set_status(str(exc), DANGER)
         page.update()
 
     async def install_one_package(e) -> None:
+        show_screen("terminal")
         if package_state["busy"]:
             return
         package = (package_name_input.value or "").strip()
@@ -746,6 +752,7 @@ def main(page: ft.Page) -> None:
             page.update()
 
     async def install_project_requirements(e) -> None:
+        show_screen("terminal")
         if package_state["busy"]:
             return
         try:
@@ -772,6 +779,7 @@ def main(page: ft.Page) -> None:
             page.update()
 
     def show_installed_packages(e) -> None:
+        show_screen("terminal")
         try:
             packages = list_installed()
             output_text.value = "المكتبات المثبتة ({})\\n".format(len(packages))
@@ -787,6 +795,7 @@ def main(page: ft.Page) -> None:
         page.update()
 
     def check_current_syntax(e) -> None:
+        show_screen("terminal")
         if Path(active_file).suffix.lower() not in {".py", ".pyw"}:
             set_status("الفحص النحوي متاح لملفات Python فقط.", DANGER)
             page.update()
@@ -798,6 +807,7 @@ def main(page: ft.Page) -> None:
         page.update()
 
     def search_project(e) -> None:
+        show_screen("terminal")
         try:
             results = store.search_project(active_project, search_input.value or "")
             if not results:

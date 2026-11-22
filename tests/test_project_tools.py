@@ -27,6 +27,34 @@ class ProjectToolsTests(unittest.TestCase):
         self.assertIn("POSSIBLE_SECRET", codes)
         self.assertIn("SHELL_TRUE", codes)
 
+
+    def test_flags_mutable_defaults_and_silent_exceptions(self):
+        source = (
+            "def add(item, bucket=[]):\n    bucket.append(item)\n"
+            "try:\n    work()\nexcept:\n    pass\n"
+        )
+        result = inspect_python_source(source, "quality.py")
+        codes = {item["code"] for item in result["diagnostics"]}
+        self.assertIn("MUTABLE_DEFAULT", codes)
+        self.assertIn("BARE_EXCEPT", codes)
+        self.assertIn("SILENT_EXCEPTION", codes)
+
+    def test_flags_http_requests_without_timeout(self):
+        result = inspect_python_source(
+            "requests.get(url)\nhttpx.post(url, timeout=5)\n", "network.py"
+        )
+        findings = [item for item in result["diagnostics"] if item["code"] == "HTTP_NO_TIMEOUT"]
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0]["line"], 1)
+
+    def test_flags_wildcard_import_and_todo_markers(self):
+        result = inspect_python_source(
+            "from package import *  # TODO replace this\n", "imports.py"
+        )
+        codes = {item["code"] for item in result["diagnostics"]}
+        self.assertIn("WILDCARD_IMPORT", codes)
+        self.assertIn("TODO", codes)
+
     def test_analyze_project_returns_metrics_and_report(self):
         with tempfile.TemporaryDirectory() as directory:
             store = WorkspaceStore(Path(directory) / "data")
@@ -36,6 +64,8 @@ class ProjectToolsTests(unittest.TestCase):
             self.assertEqual(report["metrics"]["python_files"], 1)
             self.assertEqual(report["metrics"]["functions"], 1)
             self.assertEqual(report["metrics"]["todos"], 1)
+            self.assertEqual(report["severity_counts"]["info"], 1)
+            self.assertGreaterEqual(report["quality_score"], 0)
             rendered = format_analysis_report("Test", report)
             self.assertIn("تقرير فحص المشروع", rendered)
             self.assertIn("TODO/FIXME", rendered)
