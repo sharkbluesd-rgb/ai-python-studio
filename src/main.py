@@ -15,6 +15,7 @@ from editor_tabs import OpenFileTabs
 from file_tree import build_tree_entries
 from project_tools import analyze_project as inspect_project, format_analysis_report
 from workspace import MAX_ARCHIVE_BYTES, WorkspaceError, WorkspaceStore
+from package_manager import PackageManagerError, parse_requirements, install_packages, list_installed
 
 
 APP_BG = "#080B12"
@@ -122,6 +123,8 @@ def main(page: ft.Page) -> None:
     replace_preview_state = {"find": "", "replacement": "", "matches": 0}
     replace_apply_button = ft.Button(content="تطبيق الاستبدال", disabled=True)
 
+    package_name_input = ft.TextField(hint_text="اسم المكتبة، مثال: requests", text_size=13, expand=True)
+    package_state = {"busy": False}
     run_button = ft.Button(content="تشغيل Python", bgcolor="#237A55", color="white")
     run_state = {"running": False}
     file_picker = ft.FilePicker()
@@ -691,6 +694,72 @@ def main(page: ft.Page) -> None:
             set_status(str(exc), DANGER)
         page.update()
 
+    async def install_one_package(e) -> None:
+        if package_state["busy"]:
+            return
+        package = (package_name_input.value or "").strip()
+        try:
+            packages = parse_requirements(package)
+            if len(packages) != 1:
+                raise PackageManagerError("أدخل اسم مكتبة واحدة فقط.")
+            package_state["busy"] = True
+            set_status("جارٍ تثبيت المكتبة...", ACCENT)
+            output_text.value = "يتم تثبيت المكتبة عبر Python الحالي..."
+            output_text.color = TEXT
+            page.update()
+            result = await asyncio.to_thread(install_packages, packages)
+            output_text.value = result
+            package_name_input.value = ""
+            set_status("اكتمل تثبيت المكتبة. أعد تشغيل التطبيق إذا لزم.", SUCCESS)
+        except PackageManagerError as exc:
+            output_text.value = str(exc)
+            output_text.color = DANGER
+            set_status("تعذر تثبيت المكتبة.", DANGER)
+        finally:
+            package_state["busy"] = False
+            page.update()
+
+    async def install_project_requirements(e) -> None:
+        if package_state["busy"]:
+            return
+        try:
+            if "requirements.txt" not in store.list_files(active_project):
+                raise PackageManagerError("لا يوجد requirements.txt في المشروع.")
+            requirements = store.read_file(active_project, "requirements.txt")
+            packages = parse_requirements(requirements)
+            if not packages:
+                raise PackageManagerError("ملف requirements.txt فارغ.")
+            package_state["busy"] = True
+            set_status(f"جارٍ تثبيت {len(packages)} مكتبة...", ACCENT)
+            output_text.value = "يتم تثبيت اعتماديات المشروع..."
+            output_text.color = TEXT
+            page.update()
+            result = await asyncio.to_thread(install_packages, packages)
+            output_text.value = result
+            set_status(f"اكتمل تثبيت {len(packages)} مكتبة.", SUCCESS)
+        except (PackageManagerError, WorkspaceError) as exc:
+            output_text.value = str(exc)
+            output_text.color = DANGER
+            set_status("تعذر تثبيت اعتماديات المشروع.", DANGER)
+        finally:
+            package_state["busy"] = False
+            page.update()
+
+    def show_installed_packages(e) -> None:
+        try:
+            packages = list_installed()
+            output_text.value = "المكتبات المثبتة ({})\\n".format(len(packages))
+            output_text.value += "\\n".join(
+                f"{name}  —  {version}" for name, version in packages
+            )
+            output_text.color = TEXT
+            set_status(f"عدد المكتبات المثبتة: {len(packages)}", SUCCESS)
+        except Exception as exc:
+            output_text.value = f"تعذر قراءة المكتبات: {exc}"
+            output_text.color = DANGER
+            set_status("فشل عرض المكتبات.", DANGER)
+        page.update()
+
     def check_current_syntax(e) -> None:
         if Path(active_file).suffix.lower() not in {".py", ".pyw"}:
             set_status("الفحص النحوي متاح لملفات Python فقط.", DANGER)
@@ -982,6 +1051,39 @@ def main(page: ft.Page) -> None:
         border=ft.Border.all(1, "#202B3B"),
     )
 
+    package_panel = ft.Container(
+        content=ft.Column(
+            controls=[
+                ft.Text("مدير مكتبات Python", size=12, weight=ft.FontWeight.BOLD, color=MUTED),
+                ft.Row(
+                    controls=[
+                        package_name_input,
+                        ft.Button(content="تثبيت مكتبة", on_click=install_one_package),
+                    ],
+                    wrap=True,
+                    spacing=6,
+                ),
+                ft.Row(
+                    controls=[
+                        ft.Button(content="تثبيت requirements.txt", on_click=install_project_requirements),
+                        ft.Button(content="المكتبات المثبتة", on_click=show_installed_packages),
+                    ],
+                    wrap=True,
+                    spacing=6,
+                ),
+                ft.Text(
+                    "التثبيت يستهدف مفسر Python الحالي. توافق المكتبات مع Android يختلف حسب الحزمة.",
+                    size=10, color=MUTED,
+                ),
+            ],
+            spacing=8,
+        ),
+        padding=12,
+        bgcolor=PANEL,
+        border_radius=14,
+        border=ft.Border.all(1, "#202B3B"),
+    )
+
     output_panel = ft.Container(
         content=ft.Column(
             controls=[
@@ -1019,7 +1121,7 @@ def main(page: ft.Page) -> None:
     page.add(
         ft.SafeArea(
             content=ft.Column(
-                controls=[header, project_panel, toolbar, editor_panel, search_panel, project_tools_panel, output_panel, status_text, safety_note],
+                controls=[header, project_panel, toolbar, editor_panel, search_panel, project_tools_panel, package_panel, output_panel, status_text, safety_note],
                 spacing=10,
                 expand=True,
             )
