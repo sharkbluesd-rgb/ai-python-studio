@@ -227,6 +227,29 @@ class GitHubClient:
     def list_run_jobs(self, owner: str, repo: str, run_id: int) -> list[dict]:
         return self.request(f"/repos/{owner}/{repo}/actions/runs/{int(run_id)}/jobs")["jobs"]
 
+    def get_job_logs(self, owner: str, repo: str, job_id: int) -> str:
+        url = f"{API}/repos/{owner}/{repo}/actions/jobs/{int(job_id)}/logs"
+        request = urllib.request.Request(url, headers={
+            "Authorization": f"Bearer {self._token}",
+            "Accept": "application/vnd.github+json",
+            "User-Agent": USER_AGENT,
+        })
+        try:
+            with urllib.request.urlopen(request, timeout=45) as response:
+                raw = response.read(20 * 1024 * 1024 + 1)
+        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError) as exc:
+            raise GitHubError(f"تعذر جلب سجل البناء: {exc}") from exc
+        if len(raw) > 20 * 1024 * 1024:
+            raise GitHubError("سجل البناء أكبر من 20 MB.")
+        if raw.startswith(b"PK"):
+            try:
+                with zipfile.ZipFile(io.BytesIO(raw)) as archive:
+                    chunks = [archive.read(name).decode("utf-8", "replace") for name in archive.namelist() if name.lower().endswith(".txt")]
+                    return "\n".join(chunks)[-40000:]
+            except zipfile.BadZipFile as exc:
+                raise GitHubError("أرشيف سجل البناء غير صالح.") from exc
+        return raw.decode("utf-8", "replace")[-40000:]
+
     def list_artifacts(self, owner: str, repo: str, run_id: int) -> list[dict]:
         return self.request(f"/repos/{owner}/{repo}/actions/runs/{int(run_id)}/artifacts")["artifacts"]
 

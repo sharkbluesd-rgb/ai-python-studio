@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import shlex
 import time
+import io
+import zipfile
 from pathlib import Path, PurePosixPath
 
 import flet as ft
@@ -1333,12 +1335,23 @@ def main(page: ft.Page) -> None:
             archive = await asyncio.to_thread(
                 client.download_artifact, owner, repo_name, artifact["id"]
             )
+            try:
+                with zipfile.ZipFile(io.BytesIO(archive)) as package:
+                    apk_names = [name for name in package.namelist() if name.lower().endswith(".apk")]
+                    if not apk_names:
+                        raise GitHubError("الأرشيف لا يحتوي ملف APK.")
+                    apk_name = apk_names[0]
+                    if apk_name.startswith("/") or ".." in Path(apk_name).parts:
+                        raise GitHubError("مسار APK داخل الأرشيف غير آمن.")
+                    apk_bytes = package.read(apk_name)
+            except zipfile.BadZipFile as exc:
+                raise GitHubError("أرشيف البناء الذي أعاده GitHub غير صالح.") from exc
             path = await file_picker.save_file(
-                dialog_title="حفظ APK build artifact",
-                file_name=f"{repo_name}-apk.zip",
+                dialog_title="حفظ تطبيق Android APK",
+                file_name=f"{repo_name}-release.apk",
                 file_type=ft.FilePickerFileType.CUSTOM,
-                allowed_extensions=["zip"],
-                src_bytes=archive,
+                allowed_extensions=["apk"],
+                src_bytes=apk_bytes,
             )
             github_status.value = f"تم تنزيل أرشيف البناء إلى: {path}" if path else "تم تجهيز الأرشيف أو أُلغي الحفظ."
             github_status.color = SUCCESS if path else MUTED
