@@ -5,8 +5,6 @@ from __future__ import annotations
 import asyncio
 import shlex
 import time
-import io
-import zipfile
 from pathlib import Path, PurePosixPath
 
 import flet as ft
@@ -1118,6 +1116,7 @@ def main(page: ft.Page) -> None:
     github_device_info = ft.Text("لم يتم ربط GitHub بعد.", size=11, color=MUTED, selectable=True)
     github_private = ft.Checkbox(label="مستودع خاص (Private)", value=True)
     github_status = ft.Text("الرمز لا يُحفظ على الجهاز؛ ينتهي عند إغلاق التطبيق أو قطع الاتصال.", size=11, color=MUTED)
+    github_repo_choices = ft.Column(controls=[], spacing=5, scroll=ft.ScrollMode.AUTO)
 
     async def start_github_login(e) -> None:
         try:
@@ -1177,6 +1176,13 @@ def main(page: ft.Page) -> None:
         github_device_info.value = "لم يتم ربط GitHub."
         page.update()
 
+    async def choose_github_repository(full_name: str, default_branch: str) -> None:
+        github_repository.value = full_name
+        github_branch.value = default_branch or "main"
+        github_status.value = f"تم اختيار المستودع {full_name}."
+        github_status.color = SUCCESS
+        page.update()
+
     async def list_github_repositories(e) -> None:
         client = github_state.get("client")
         if not client:
@@ -1186,13 +1192,23 @@ def main(page: ft.Page) -> None:
             return
         try:
             repos = await asyncio.to_thread(client.list_repositories)
-            lines = [f"{item['full_name']}  ·  {'Private' if item.get('private') else 'Public'}"
-                     for item in repos[:80]]
-            output_text.value = "مستودعات GitHub المتاحة (حتى 80):\\n" + "\\n".join(lines)
-            output_text.color = TEXT
-            github_status.value = f"تم جلب {len(repos)} مستودعاً. اكتب owner/repository في الحقل."
+            github_repo_choices.controls = []
+            for item in repos[:80]:
+                full_name = item.get("full_name", "")
+                default_branch = item.get("default_branch") or "main"
+                label = f"{full_name} · {'خاص' if item.get('private') else 'عام'}"
+                github_repo_choices.controls.append(
+                    ft.Button(
+                        content=label,
+                        on_click=lambda e, name=full_name, branch=default_branch:
+                            choose_github_repository(name, branch),
+                        bgcolor="#172131", color=TEXT,
+                    )
+                )
+            if not repos:
+                github_repo_choices.controls.append(ft.Text("لا توجد مستودعات في هذا الحساب.", color=MUTED, size=11))
+            github_status.value = f"تم جلب {len(repos)} مستودعاً؛ اختر المستودع من القائمة."
             github_status.color = SUCCESS
-            show_screen("terminal")
         except GitHubError as exc:
             github_status.value = str(exc)
             github_status.color = DANGER
@@ -1268,6 +1284,10 @@ def main(page: ft.Page) -> None:
             return
         try:
             owner, repo_name, branch = parse_github_repository()
+            from flet_project import validate_flet_project
+            issues = validate_flet_project(store._project_dir(active_project))
+            if issues:
+                raise GitHubError("المشروع غير جاهز لبناء Android:\n• " + "\n• ".join(issues))
             github_status.value = "جارٍ تشغيل GitHub Actions..."
             github_status.color = ACCENT
             page.update()
@@ -1334,24 +1354,20 @@ def main(page: ft.Page) -> None:
             return
         try:
             owner, repo_name, _ = parse_github_repository()
+            run = await asyncio.to_thread(client.get_workflow_run, owner, repo_name, run_id)
+            if run.get("status") != "completed" or run.get("conclusion") != "success":
+                raise GitHubError("لا يمكن تنزيل APK قبل اكتمال البناء بنجاح.")
             artifacts = await asyncio.to_thread(client.list_artifacts, owner, repo_name, run_id)
-            artifact = next((item for item in artifacts if not item.get("expired")), None)
-            if not artifact:
-                raise GitHubError("لا يوجد APK artifact صالح لهذا البناء.")
+            artifact = next(
+                (item for item in artifacts if item.get("name") == "flet-apk.zip" and not item.get("expired")),
+                None,
+            )
+            if artifact is None:
+                raise GitHubError("لم يعثر التطبيق على artifact باسم flet-apk.zip لهذا البناء الناجح.")
             archive = await asyncio.to_thread(
                 client.download_artifact, owner, repo_name, artifact["id"]
             )
-            try:
-                with zipfile.ZipFile(io.BytesIO(archive)) as package:
-                    apk_names = [name for name in package.namelist() if name.lower().endswith(".apk")]
-                    if not apk_names:
-                        raise GitHubError("الأرشيف لا يحتوي ملف APK.")
-                    apk_name = apk_names[0]
-                    if apk_name.startswith("/") or ".." in Path(apk_name).parts:
-                        raise GitHubError("مسار APK داخل الأرشيف غير آمن.")
-                    apk_bytes = package.read(apk_name)
-            except zipfile.BadZipFile as exc:
-                raise GitHubError("أرشيف البناء الذي أعاده GitHub غير صالح.") from exc
+            apk_name, apk_bytes = await asyncio.to_thread(client.extract_apk, archive)
             path = await file_picker.save_file(
                 dialog_title="حفظ تطبيق Android APK",
                 file_name=f"{repo_name}-release.apk",
@@ -1359,7 +1375,10 @@ def main(page: ft.Page) -> None:
                 allowed_extensions=["apk"],
                 src_bytes=apk_bytes,
             )
-            github_status.value = f"تم تنزيل أرشيف البناء إلى: {path}" if path else "تم تجهيز الأرشيف أو أُلغي الحفظ."
+            github_status.value = (
+                f"تم تجهيز {apk_name} وحفظه في: {path}"
+                if path else "تم تجهيز APK؛ أُلغيت عملية اختيار مكان الحفظ."
+            )
             github_status.color = SUCCESS if path else MUTED
         except (GitHubError, ValueError) as exc:
             github_status.value = str(exc)
@@ -1384,6 +1403,7 @@ def main(page: ft.Page) -> None:
                 ft.Button(content="عرض مستودعاتي", on_click=list_github_repositories),
                 ft.Button(content="إنشاء مستودع", on_click=create_github_repository),
             ], wrap=True, spacing=7),
+            github_repo_choices,
             ft.Row(controls=[
                 ft.Button(content="رفع المشروع", on_click=upload_project_to_github, bgcolor=ACCENT, color="white"),
                 ft.Button(content="تشغيل البناء", on_click=trigger_github_build, bgcolor="#237A55", color="white"),
