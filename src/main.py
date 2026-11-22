@@ -9,7 +9,7 @@ from pathlib import Path, PurePosixPath
 import flet as ft
 import flet_code_editor as fce
 
-from runner import ExecutionControl, check_python, execute_python
+from runner import ExecutionControl, check_python, execute_python, execute_unittest_discovery
 from templates import TEMPLATES
 from editor_tabs import OpenFileTabs
 from file_tree import build_tree_entries
@@ -126,6 +126,7 @@ def main(page: ft.Page) -> None:
     package_name_input = ft.TextField(hint_text="اسم المكتبة، مثال: requests", text_size=13, expand=True)
     package_state = {"busy": False}
     run_button = ft.Button(content="تشغيل Python", bgcolor="#237A55", color="white")
+    test_button = ft.Button(content="اختبارات المشروع", bgcolor="#34466B", color="white")
     stop_button = ft.Button(
         content="إيقاف التنفيذ", bgcolor="#8B3038",
         color="white", disabled=True,
@@ -514,6 +515,61 @@ def main(page: ft.Page) -> None:
             set_status(str(exc), DANGER)
         page.update()
 
+    async def run_project_tests(e) -> None:
+        show_screen("terminal")
+        if run_state["running"]:
+            return
+        try:
+            save_current_file()
+        except WorkspaceError as exc:
+            output_text.value = str(exc)
+            output_text.color = DANGER
+            set_status("تعذر حفظ الملف قبل الاختبارات.", DANGER)
+            page.update()
+            return
+
+        project_path = str(store._project_dir(active_project))
+        run_state["running"] = True
+        run_state["control"] = ExecutionControl(timeout_seconds=180)
+        run_button.disabled = True
+        test_button.disabled = True
+        stop_button.disabled = False
+        output_text.value = "جارٍ اكتشاف اختبارات المشروع وتشغيلها..."
+        output_text.color = TEXT
+        set_status("تشغيل اختبارات المشروع...", ACCENT)
+        page.update()
+        started_at = time.monotonic()
+        try:
+            result, succeeded = await asyncio.to_thread(
+                execute_unittest_discovery,
+                project_path,
+                "tests",
+                "test*.py",
+                None,
+                run_state["control"],
+            )
+            output_text.value = result[:OUTPUT_LIMIT]
+            if len(result) > OUTPUT_LIMIT:
+                output_text.value += "\n\n[تم اختصار سجل الاختبارات لطوله الكبير]"
+            output_text.color = SUCCESS if succeeded else DANGER
+            elapsed = time.monotonic() - started_at
+            set_status(
+                f"نجحت اختبارات المشروع خلال {elapsed:.2f} ثانية."
+                if succeeded else f"لم تنجح جميع الاختبارات ({elapsed:.2f} ثانية).",
+                SUCCESS if succeeded else DANGER,
+            )
+        except Exception as exc:
+            output_text.value = f"تعذر تشغيل الاختبارات: {exc}"
+            output_text.color = DANGER
+            set_status("فشل تشغيل اختبارات المشروع.", DANGER)
+        finally:
+            run_state["running"] = False
+            run_state["control"] = None
+            run_button.disabled = False
+            test_button.disabled = False
+            stop_button.disabled = True
+            page.update()
+
     async def run_code(e) -> None:
         show_screen("terminal")
         if run_state["running"]:
@@ -893,6 +949,7 @@ def main(page: ft.Page) -> None:
 
     editor.on_change = on_editor_change
     run_button.on_click = run_code
+    test_button.on_click = run_project_tests
     stop_button.on_click = stop_code
     replace_apply_button.on_click = apply_project_replace
 
@@ -1017,6 +1074,7 @@ def main(page: ft.Page) -> None:
     toolbar = ft.Row(
         controls=[
             run_button,
+            test_button,
             stop_button,
             ft.Button(content="فحص", on_click=check_current_syntax),
             ft.Button(content="حفظ", on_click=lambda e: save_and_update()),

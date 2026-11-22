@@ -38,6 +38,38 @@ class RunnerTests(unittest.TestCase):
         self.assertFalse(success)
         self.assertIn("RuntimeError: failure", result)
 
+
+    def test_runs_unittest_discovery_from_project_root(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            test_dir = project / "tests"
+            test_dir.mkdir()
+            (test_dir / "test_sample.py").write_text(
+                "import unittest\n"
+                "class SampleTests(unittest.TestCase):\n"
+                "    def test_success(self):\n"
+                "        self.assertEqual(2 + 2, 4)\n",
+                encoding="utf-8",
+            )
+            from runner import execute_unittest_discovery
+            output, success = execute_unittest_discovery(str(project))
+        self.assertTrue(success)
+        self.assertIn("test_success", output)
+        self.assertIn("النتيجة: 1 اختبار", output)
+
+    def test_rejects_test_directory_traversal(self):
+        from runner import execute_unittest_discovery
+        output, success = execute_unittest_discovery(".", "../outside")
+        self.assertFalse(success)
+        self.assertIn("غير صالح", output)
+
+    def test_reports_missing_test_directory(self):
+        from runner import execute_unittest_discovery
+        with tempfile.TemporaryDirectory() as directory:
+            output, success = execute_unittest_discovery(directory)
+        self.assertFalse(success)
+        self.assertIn("لم يتم العثور", output)
+
     def test_captures_printed_output(self):
         with tempfile.TemporaryDirectory() as directory:
             script = Path(directory) / "main.py"

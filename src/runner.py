@@ -85,6 +85,69 @@ def check_python(code: str, file_path: str = "main.py") -> tuple[bool, str]:
         return False, f"خطأ نحوي في {location}: {details}"
 
 
+def execute_unittest_discovery(
+    project_root: str,
+    tests_dir: str = "tests",
+    pattern: str = "test*.py",
+    output_callback: Callable[[str], None] | None = None,
+    control: ExecutionControl | None = None,
+) -> tuple[str, bool]:
+    """Discover and run a project's unittest suite from its project directory.
+
+    Only relative test directories are accepted. Test code is still trusted
+    code and runs in the app process through the same cooperative controls.
+    """
+    from pathlib import PurePath
+
+    relative = PurePath(tests_dir)
+    if relative.is_absolute() or not relative.parts or any(
+        part in {"", ".", ".."} for part in relative.parts
+    ):
+        return "مسار مجلد الاختبارات غير صالح.", False
+    if not isinstance(pattern, str) or not pattern or "/" in pattern or "\\\\" in pattern:
+        return "نمط أسماء ملفات الاختبار غير صالح.", False
+
+    root = Path(project_root).expanduser().resolve()
+    test_root = (root / relative).resolve()
+    try:
+        test_root.relative_to(root)
+    except ValueError:
+        return "مجلد الاختبارات يجب أن يكون داخل المشروع.", False
+    if not test_root.is_dir():
+        return f"لم يتم العثور على مجلد الاختبارات: {tests_dir}", False
+
+    script = (
+        "import sys, unittest\\n"
+        "from pathlib import Path\\n"
+        f"test_root = Path({str(test_root)!r})\\n"
+        f"project_root = Path({str(root)!r})\\n"
+        f"pattern = {pattern!r}\\n"
+        "suite = unittest.defaultTestLoader.discover(\\n"
+        "    start_dir=str(test_root), pattern=pattern, top_level_dir=str(project_root)\\n"
+        ")\\n"
+        "count = suite.countTestCases()\\n"
+        "if count == 0:\\n"
+        "    print('لم يتم العثور على اختبارات مطابقة.')\\n"
+        "    raise RuntimeError('No tests were discovered')\\n"
+        "print(f'عدد الاختبارات المكتشفة: {count}')\\n"
+        "result = unittest.TextTestRunner(stream=sys.stdout, verbosity=2).run(suite)\\n"
+        "print(f'النتيجة: {result.testsRun} اختبار، {len(result.failures)} فشل، "
+        "{len(result.errors)} خطأ')\\n"
+    )
+    synthetic_file = root / "__ai_python_studio_test_runner__.py"
+    output, executed = execute_python(
+        script,
+        str(synthetic_file),
+        project_root=str(root),
+        output_callback=output_callback,
+        control=control,
+    )
+    if not executed:
+        return output, False
+    failed = "FAILED (" in output or "No tests were discovered" in output
+    return output, not failed
+
+
 def execute_python(
     code: str,
     file_path: str,
