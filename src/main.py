@@ -9,7 +9,7 @@ from pathlib import Path, PurePosixPath
 import flet as ft
 import flet_code_editor as fce
 
-from runner import check_python, execute_python
+from runner import ExecutionControl, check_python, execute_python
 from templates import TEMPLATES
 from editor_tabs import OpenFileTabs
 from file_tree import build_tree_entries
@@ -126,7 +126,11 @@ def main(page: ft.Page) -> None:
     package_name_input = ft.TextField(hint_text="اسم المكتبة، مثال: requests", text_size=13, expand=True)
     package_state = {"busy": False}
     run_button = ft.Button(content="تشغيل Python", bgcolor="#237A55", color="white")
-    run_state = {"running": False}
+    stop_button = ft.Button(
+        content="إيقاف التنفيذ", bgcolor="#8B3038",
+        color="white", disabled=True,
+    )
+    run_state = {"running": False, "control": None}
     file_picker = ft.FilePicker()
     page.services.append(file_picker)
 
@@ -523,7 +527,9 @@ def main(page: ft.Page) -> None:
             return
 
         run_state["running"] = True
+        run_state["control"] = ExecutionControl(timeout_seconds=60)
         run_button.disabled = True
+        stop_button.disabled = False
         set_status("جارٍ التنفيذ — ستظهر المخرجات مباشرة.", ACCENT)
         output_text.value = ""
         output_text.color = TEXT
@@ -561,6 +567,7 @@ def main(page: ft.Page) -> None:
                     file_path,
                     project_path,
                     emit_output,
+                    run_state["control"],
                 )
             )
 
@@ -585,19 +592,35 @@ def main(page: ft.Page) -> None:
             output_text.color = SUCCESS if succeeded else DANGER
 
             elapsed = time.monotonic() - started_at
-            set_status(
-                f"اكتمل التنفيذ خلال {elapsed:.2f} ثانية."
-                if succeeded
-                else f"انتهى التنفيذ بخطأ بعد {elapsed:.2f} ثانية.",
-                SUCCESS if succeeded else DANGER,
-            )
+            if result.startswith("تم إيقاف التنفيذ"):
+                set_status("تم إيقاف التنفيذ.", MUTED)
+            elif result.startswith("انتهت مهلة التنفيذ"):
+                set_status("تجاوز البرنامج مهلة التنفيذ.", DANGER)
+            else:
+                set_status(
+                    f"اكتمل التنفيذ خلال {elapsed:.2f} ثانية."
+                    if succeeded
+                    else f"انتهى التنفيذ بخطأ بعد {elapsed:.2f} ثانية.",
+                    SUCCESS if succeeded else DANGER,
+                )
         except Exception as exc:
             output_text.value = f"تعذر تشغيل الكود: {exc}"
             output_text.color = DANGER
             set_status("فشل تشغيل الكود.", DANGER)
         finally:
             run_state["running"] = False
+            run_state["control"] = None
             run_button.disabled = False
+            stop_button.disabled = True
+            page.update()
+
+
+    def stop_code(e) -> None:
+        control = run_state.get("control")
+        if control is not None and run_state["running"]:
+            control.cancel()
+            stop_button.disabled = True
+            set_status("تم إرسال طلب الإيقاف...", MUTED)
             page.update()
 
     def analyze_current_project(e) -> None:
@@ -857,6 +880,7 @@ def main(page: ft.Page) -> None:
 
     editor.on_change = on_editor_change
     run_button.on_click = run_code
+    stop_button.on_click = stop_code
     replace_apply_button.on_click = apply_project_replace
 
     header = ft.Container(
@@ -924,6 +948,7 @@ def main(page: ft.Page) -> None:
     toolbar = ft.Row(
         controls=[
             run_button,
+            stop_button,
             ft.Button(content="فحص الكود", on_click=check_current_syntax),
             ft.Button(content="حفظ", on_click=lambda e: save_and_update()),
             ft.Button(content="مثال", on_click=load_example),

@@ -12,11 +12,42 @@ import io
 import sys
 import threading
 import traceback
+import time
 from collections.abc import Callable
 from pathlib import Path
 
 
 _RUN_LOCK = threading.RLock()
+
+
+class ExecutionCancelled(Exception):
+    """Raised when the user requests execution cancellation."""
+
+
+class ExecutionTimedOut(Exception):
+    """Raised when the execution time limit is reached."""
+
+
+class ExecutionControl:
+    """Cooperative cancellation and timeout for Python execution."""
+
+    def __init__(self, timeout_seconds: float | None = 60):
+        self._cancelled = threading.Event()
+        self._deadline = (
+            time.monotonic() + timeout_seconds
+            if timeout_seconds is not None else None
+        )
+
+    def cancel(self) -> None:
+        self._cancelled.set()
+
+    def check(self) -> None:
+        if self._cancelled.is_set():
+            self._cancelled.clear()
+            raise ExecutionCancelled()
+        if self._deadline is not None and time.monotonic() >= self._deadline:
+            self._deadline = None
+            raise ExecutionTimedOut()
 
 
 class _OutputCapture(io.StringIO):
@@ -57,6 +88,7 @@ def execute_python(
     file_path: str,
     project_root: str | None = None,
     output_callback: Callable[[str], None] | None = None,
+    control: ExecutionControl | None = None,
 ) -> tuple[str, bool]:
     """Run a trusted script and return ``(captured_output, succeeded)``.
 
@@ -84,12 +116,21 @@ def execute_python(
     with _RUN_LOCK:
         original_argv = sys.argv[:]
         original_sys_path = sys.path[:]
+        original_trace = sys.gettrace()
+
+        def execution_trace(frame, event, arg):
+            if control is not None and event == "line":
+                control.check()
+            return execution_trace
+
         try:
             for candidate in (project_dir, script_dir):
                 if candidate not in sys.path:
                     sys.path.insert(0, candidate)
                     added_paths.append(candidate)
             sys.argv = [str(script_path)]
+            if control is not None:
+                sys.settrace(execution_trace)
             with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
                 exec(compile(code, str(script_path), "exec"), namespace, namespace)
             output = stdout.getvalue()
@@ -97,6 +138,10 @@ def execute_python(
             if error_output:
                 output += ("\n" if output else "") + error_output
             return output or "تم التنفيذ بنجاح — لا يوجد إخراج.", True
+        except ExecutionCancelled:
+            return "تم إيقاف التنفيذ بطلب المستخدم.", False
+        except ExecutionTimedOut:
+            return "انتهت مهلة التنفيذ (60 ثانية).", False
         except BaseException:
             output = stdout.getvalue()
             error_output = stderr.getvalue()
@@ -112,5 +157,6 @@ def execute_python(
             combined += ("\n" if combined else "") + details
             return combined, False
         finally:
+            sys.settrace(original_trace)
             sys.argv = original_argv
             sys.path[:] = original_sys_path
