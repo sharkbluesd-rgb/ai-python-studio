@@ -70,16 +70,21 @@ jobs:
           python -m playwright install --with-deps chromium
       - name: Run built Flet app in Chromium
         run: |
-          python -m http.server 8765 --directory build/web/flet-editor > /tmp/flet-editor-server.log 2>&1 &
+          # Flet embeds the GitHub Pages project base URL in its web bootstrap.
+          # Mirror that exact URL locally; serving the app at "/" leaves Flutter
+          # requesting assets from the wrong path and produces an empty page.
+          mkdir -p build/web/ai-python-studio
+          ln -s ../flet-editor build/web/ai-python-studio/flet-editor
+          python -m http.server 8765 --directory build/web > /tmp/flet-editor-server.log 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT
           for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:8765/ > /dev/null; then
+            if curl --fail --silent http://127.0.0.1:8765/ai-python-studio/flet-editor/ > /dev/null; then
               break
             fi
             sleep 1
           done
-          FLET_EDITOR_URL=http://127.0.0.1:8765/ python tools/smoke_test_flet_web.py
+          FLET_EDITOR_URL=http://127.0.0.1:8765/ai-python-studio/flet-editor/ python tools/smoke_test_flet_web.py
       - name: Verify static output and skill catalog
         run: |
           test -s build/web/index.html
