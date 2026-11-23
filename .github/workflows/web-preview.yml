@@ -10,6 +10,7 @@ on:
       - "src/agent_skills/**"
       - "tools/build_static_web_preview.py"
       - "web-preview-static/**"
+      - "web-flet-editor/**"
       - "tests/test_web_preview.py"
       - "pyproject.toml"
       - ".github/workflows/web-preview.yml"
