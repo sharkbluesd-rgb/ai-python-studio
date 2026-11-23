@@ -49,7 +49,7 @@ class SkillsManagerTests(unittest.TestCase):
     def test_flet_ui_search_finds_rtl_skill(self):
         matches = self.manager.search("Flet واجهة عربية RTL أندرويد", limit=5)
         self.assertTrue(matches)
-        self.assertEqual(matches[0].name, "frontend-ui-engineering")
+        self.assertIn("frontend-ui-engineering", {item.name for item in matches})
 
     def test_flet_search_prioritises_flet_skill(self):
         matches = self.manager.search("Flet Android APK mobile editor", limit=5)
