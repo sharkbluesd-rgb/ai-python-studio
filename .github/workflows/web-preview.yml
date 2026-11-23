@@ -55,20 +55,52 @@ jobs:
           PYTHONPATH: src
         run: python -m unittest discover -s tests -p "test_web_preview.py" -v
 
+      - name: Prepare isolated Flet app with CodeEditor dependency
+        run: |
+          mkdir -p web-preview
+          cp src/web_preview.py web-preview/main.py
+          cat > web-preview/pyproject.toml <<'EOF'
+          [project]
+          name = "ai-python-studio-web-preview"
+          version = "1.2.0"
+          requires-python = ">=3.10"
+          dependencies = [
+              "flet==1.1.2",
+              "flet-code-editor==1.1.2",
+          ]
+
+          [tool.flet]
+          product = "AI Python Studio Web Preview"
+          EOF
+
       - name: Build static web app with custom Flutter extensions
         run: >-
-          flet build web src --module-name web_preview
+          flet build web web-preview
           --yes
           --verbose
           --base-url "/ai-python-studio/"
           --route-url-strategy hash
           --output "${GITHUB_WORKSPACE}/build/web"
 
-      - name: Verify web build output
+      - name: Verify web build and bundled CodeEditor dependency
         run: |
           test -s "${GITHUB_WORKSPACE}/build/web/index.html"
           test -d "${GITHUB_WORKSPACE}/build/web"
-          echo "Web build output exists."
+          python - <<'PY'
+          from pathlib import Path
+          import zipfile
+
+          archive = Path("build/web/assets/app/app.zip")
+          if not archive.is_file():
+              raise SystemExit("Flet app archive is missing.")
+          with zipfile.ZipFile(archive) as app:
+              names = app.namelist()
+          matches = [name for name in names if "flet_code_editor" in name.lower()]
+          if not matches:
+              raise SystemExit("flet-code-editor was not bundled in the web app.")
+          print(f"Bundled flet-code-editor entries: {len(matches)}")
+          PY
+          echo "Web build output and CodeEditor Python package verified."
           find "${GITHUB_WORKSPACE}/build/web" -maxdepth 2 -type f | head -40
 
       - name: Upload standalone browser preview

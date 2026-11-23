@@ -7,9 +7,11 @@ custom-built web client.
 
 ## Build and deployment
 
-The workflow `.github/workflows/web-preview.yml` builds
-`src/web_preview.py` with Flet 1.1.2, packages the CodeEditor extension, and
-deploys the static preview to GitHub Pages from `feature/studio-2.0`.
+The workflow `.github/workflows/web-preview.yml` copies
+`src/web_preview.py` into an isolated Flet app directory with its own
+`pyproject.toml`, explicitly pins both Flet and `flet-code-editor` 1.1.2,
+then builds the custom Flutter web client and checks that the CodeEditor
+Python package is present in the packaged runtime before publishing.
 
 Expected address:
 
