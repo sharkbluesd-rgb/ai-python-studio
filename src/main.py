@@ -171,7 +171,7 @@ def _build_main(page: ft.Page) -> None:
     status_indicator = ft.Container(width=7, height=7, bgcolor=SUCCESS, border_radius=8)
     project_buttons = ft.Row(wrap=True, spacing=6)
     file_buttons = ft.Row(wrap=True, spacing=6)
-    tab_buttons = ft.Row(wrap=True, spacing=4)
+    tab_buttons = ft.Row(wrap=True, spacing=6)
     tree_view = ft.Column(controls=[], spacing=2, scroll=ft.ScrollMode.AUTO)
     expanded_folders = set()
     active_file_label = ft.Text(active_file, size=13, color="#C7BFFF", weight=ft.FontWeight.BOLD)
@@ -1764,7 +1764,7 @@ def _build_main(page: ft.Page) -> None:
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         ),
         padding=ft.Padding.symmetric(horizontal=9, vertical=8),
-        bgcolor="#101A29",
+        bgcolor=PANEL_RAISED,
         border=ft.Border.all(1, BORDER),
         border_radius=15,
     )
@@ -1781,7 +1781,7 @@ def _build_main(page: ft.Page) -> None:
                                     ft.Row(
                                         controls=[
                                             ft.Container(width=7, height=7, bgcolor=ACCENT, border_radius=8),
-                                            active_file_label,
+                                            ft.Container(content=active_file_label, rtl=False),
                                             ft.Container(
                                                 content=ft.Text("PYTHON", size=9, color="#D6D0FF", weight=ft.FontWeight.BOLD),
                                                 bgcolor="#282548",
@@ -2340,8 +2340,14 @@ def _build_main(page: ft.Page) -> None:
         selected_tab = name if name in nav_buttons else "more"
         for key, button in nav_buttons.items():
             selected = key == selected_tab
-            button.bgcolor = "#302D59" if selected else "#121C2A"
-            button.color = "#E3DFFF" if selected else MUTED
+            button.bgcolor = "#302A59" if selected else "#111B29"
+            button.color = "#E8E3FF" if selected else "#9AA9BD"
+            button.style = _button_style(
+                radius=12,
+                horizontal=3,
+                vertical=8,
+                border_color="#51498B" if selected else BORDER,
+            )
         page.update()
 
     # Secondary destinations remain first-class screens, but are grouped to
