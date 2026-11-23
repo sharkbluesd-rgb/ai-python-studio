@@ -2,6 +2,7 @@ import unittest
 
 from web_preview import (
     build_skill_context,
+    configure_arabic_page,
     select_skill_documents,
     validate_python_source,
 )
@@ -30,6 +31,17 @@ CATALOG = [
 
 
 class WebPreviewValidationTests(unittest.TestCase):
+    def test_arabic_web_theme_loads_font_for_light_and_dark_modes(self):
+        class FakePage:
+            pass
+
+        page = FakePage()
+        configure_arabic_page(page)
+        self.assertIn("Amiri", page.fonts)
+        self.assertTrue(page.fonts["Amiri"].endswith("/Amiri-Regular.ttf"))
+        self.assertEqual(page.theme.font_family, "Amiri")
+        self.assertEqual(page.dark_theme.font_family, "Amiri")
+
     def test_valid_python_source(self):
         valid, message = validate_python_source("print('hello')\n")
         self.assertTrue(valid)

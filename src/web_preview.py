@@ -27,6 +27,18 @@ MUTED = "#9AA8BC"
 SUCCESS = "#83DDB8"
 DANGER = "#FF8F9B"
 
+ARABIC_FONT_FAMILY = "Amiri"
+ARABIC_FONT_URL = (
+    "https://raw.githubusercontent.com/google/fonts/main/ofl/amiri/Amiri-Regular.ttf"
+)
+
+
+def configure_arabic_page(page) -> None:
+    """Load an Arabic-capable font for the browser UI and apply it to both themes."""
+    page.fonts = {ARABIC_FONT_FAMILY: ARABIC_FONT_URL}
+    page.theme = ft.Theme(font_family=ARABIC_FONT_FAMILY)
+    page.dark_theme = ft.Theme(font_family=ARABIC_FONT_FAMILY)
+
 STARTER_FILES = {
     "main.py": '''"""AI Python Studio — browser editor preview."""
 
@@ -164,8 +176,9 @@ async def _gemini_request(api_key: str, model: str, prompt: str,
 
 
 def main(page: ft.Page) -> None:
-    page.title = "AI Python Studio — Web Preview"
+    page.title = "استوديو بايثون الذكي — معاينة الويب"
     page.theme_mode = ft.ThemeMode.DARK
+    configure_arabic_page(page)
     page.bgcolor = BG
     page.padding = 0
     page.spacing = 0
@@ -188,7 +201,7 @@ def main(page: ft.Page) -> None:
             show_line_numbers=True, show_folding_handles=True, show_errors=True, width=48
         ),
         text_style=ft.TextStyle(size=14, font_family="monospace"),
-        padding=12, autofocus=False, expand=True,
+        padding=12, autofocus=False, expand=True, rtl=False,
     )
 
     def set_status(message: str, color: str = MUTED) -> None:
@@ -255,7 +268,7 @@ def main(page: ft.Page) -> None:
                     spacing=3, expand=True,
                 ),
                 ft.Container(
-                    content=ft.Text("WEB BETA", size=10, color="#D8D3FF"),
+                    content=ft.Text("معاينة الويب", size=10, color="#D8D3FF"),
                     padding=ft.Padding.symmetric(horizontal=10, vertical=8),
                     bgcolor="#242143", border_radius=20,
                 ),
@@ -293,7 +306,7 @@ def main(page: ft.Page) -> None:
                             ],
                             spacing=3, expand=True,
                         ),
-                        ft.Text("Python", size=11, color=MUTED),
+                        ft.Text("بايثون", size=11, color=MUTED),
                     ],
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
@@ -340,7 +353,7 @@ def main(page: ft.Page) -> None:
             ft.Row(
                 controls=[
                     ft.Text("المشروع التجريبي", size=13, color=TEXT, weight=ft.FontWeight.BOLD),
-                    ft.Text("My First Project", size=11, color=MUTED),
+                    ft.Text("مشروعي الأول", size=11, color=MUTED),
                 ],
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             ),
@@ -360,7 +373,7 @@ def main(page: ft.Page) -> None:
     skills_search = ft.TextField(
         label="ابحث عن مهارة",
         hint_text="مثال: Flet شاشة سوداء أو GitHub Pages أو Python",
-        text_size=13,
+        text_size=13, rtl=True, text_align=ft.TextAlign.RIGHT,
     )
     skills_results = ft.Column(spacing=8)
     def refresh_skills(e=None):
@@ -403,13 +416,14 @@ def main(page: ft.Page) -> None:
 
     ai_key = ft.TextField(
         label="مفتاح Gemini API (للتجربة فقط)",
-        password=True, can_reveal_password=True, text_size=13,
+        password=True, can_reveal_password=True, text_size=13, rtl=False,
     )
-    ai_model = ft.TextField(label="النموذج", value="gemini-3.8-flash", text_size=13)
+    ai_model = ft.TextField(label="النموذج", value="gemini-3.8-flash", text_size=13, rtl=False)
     ai_prompt = ft.TextField(
         label="اكتب سؤالك البرمجي",
         hint_text="مثال: افحص سبب بقاء Flet على شاشة التحميل...",
         multiline=True, min_lines=3, max_lines=7, text_size=13,
+        rtl=True, text_align=ft.TextAlign.RIGHT,
     )
     ai_include_code = ft.Checkbox(label="إرسال محتوى الملف المفتوح أيضاً", value=False)
     ai_consent = ft.Checkbox(
@@ -513,6 +527,7 @@ def main(page: ft.Page) -> None:
 
     page.add(
         ft.SafeArea(
+            rtl=True,
             content=ft.Column(
                 controls=[header, ft.Container(content=navigation, padding=10), screen_host],
                 spacing=0, expand=True,
