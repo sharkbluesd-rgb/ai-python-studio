@@ -131,6 +131,25 @@ jobs:
           path: ${{ github.workspace }}/build/web
           name: github-pages
 
+      - name: Summarize browser preview
+        if: always()
+        env:
+          PAGES_CONFIGURE_OUTCOME: ${{ steps.configure_pages.outcome }}
+        run: |
+          {
+            echo "## AI Python Studio — Browser Preview"
+            echo "- Static web build: passed."
+            echo "- Test-only preview artifact: ai-python-studio-web-preview."
+            echo "- [Open workflow artifacts](https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts)."
+            if [ "\$PAGES_CONFIGURE_OUTCOME" = "success" ]; then
+              echo "- GitHub Pages is configured; the deployment job will publish this preview."
+            else
+              echo "- GitHub Pages could not be enabled by the connected GitHub integration."
+              echo "- A repository administrator must open Settings > Pages, select GitHub Actions as the source, then rerun this workflow."
+              echo "- The ZIP artifact is still available to download and test locally."
+            fi
+          } >> "\$GITHUB_STEP_SUMMARY"
+
   deploy:
     name: Publish browser preview
     if: github.ref == 'refs/heads/feature/studio-2.0' && needs.build.outputs.pages_enabled == 'true'

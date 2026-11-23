@@ -41,20 +41,6 @@ To run the Flet application locally:
 flet run
 ```
 
-## Browser Preview
-
-The `Build and deploy AI Python Studio Web Preview` workflow builds a small, browser-only diagnostic version to verify that the Flet `CodeEditor` extension renders in a browser. It is intentionally separate from the Android app and currently provides only:
-
-- A CodeEditor with Python syntax highlighting, line numbers, folding and autocomplete.
-- Two in-memory sample Python files and file switching.
-- Python syntax validation without executing the source.
-
-This preview does **not** provide access to the phone filesystem, the Android runtime, package installation, local Python execution, GitHub sign-in or cloud APK builds. Changes are temporary and disappear when the page is reloaded. Do not enter secrets into a public preview.
-
-Every successful build uploads the `ai-python-studio-web-preview` artifact. Open the workflow run and download that artifact to test it locally. A live GitHub Pages URL is published only when GitHub Pages is enabled for the repository with **Settings → Pages → Build and deployment → Source: GitHub Actions**. The connected GitHub integration cannot enable that repository setting, so the workflow skips deployment (without failing the successful web build) until a repository administrator enables Pages and reruns it.
-
-The static Flet web build runs Python in the browser through Pyodide; it is a browser UI preview, not a replacement for the native Android runtime.
-
 ## Android APK
 
 Push to `main` or a `feature/**` branch, or start the `Build AI Python Studio APK` workflow manually from GitHub Actions. The workflow builds version `1.2.0`. The official Flet build action creates `flet-apk.zip`; GitHub Actions uploads that archive as a downloadable artifact.
