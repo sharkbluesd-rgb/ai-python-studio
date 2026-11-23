@@ -2185,6 +2185,8 @@ def _build_main(page: ft.Page) -> None:
             ai_status.color = DANGER
             page.update()
             return
+        # Consent is a one-request grant, not a session-wide permission.
+        ai_consent.value = False
         code = current_code() if ai_include_code.value else ""
         context_query = question + ("\n\n" + code[:6000] if code else "")
         try:
