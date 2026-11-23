@@ -96,6 +96,7 @@ def main(page: ft.Page) -> None:
             else fce.CodeLanguage.PLAINTEXT
         )
         file_label.value = name
+        file_row.controls = [file_button(item) for item in files]
         status.value = f"تم فتح {name}."
         status.color = "#94A3B8"
         page.update()
@@ -213,7 +214,6 @@ def main(page: ft.Page) -> None:
                         border=ft.Border.all(1, "#26364D"),
                         border_radius=10,
                         padding=10,
-                        width=float("inf"),
                     ),
                     ft.Text(
                         "نسخة توافق فقط: لا تنفّذ Python ولا تثبّت مكتبات ولا تصل إلى ملفات الهاتف. "
