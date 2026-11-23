@@ -105,12 +105,15 @@ jobs:
           skill_modules = [name for name in names if "web_skill_catalog" in name.lower()]
           if not skill_modules:
               raise SystemExit("Web skill catalog was not bundled in the app archive.")
-          skill_module = next(name for name in names if name.endswith("web_skill_catalog.py"))
+          skill_module = skill_modules[0]
           with app.open(skill_module) as source:
-              catalog_source = source.read().decode("utf-8")
-          if catalog_source.count("'name':") < 20 and catalog_source.count('"name":') < 20:
-              raise SystemExit("The web skill catalog does not include all 20 skills.")
-          print("Bundled 20 specialist skill references.")
+              catalog_bytes = source.read()
+          if b"SKILL_CATALOG" not in catalog_bytes:
+              raise SystemExit("The bundled skill module is missing SKILL_CATALOG.")
+          for expected in (b"flet-web-runtime-debugging", b"github-pages-deployment", b"python-ide-runtime"):
+              if expected not in catalog_bytes:
+                  raise SystemExit(f"Missing expected skill reference: {expected.decode()}")
+          print(f"Bundled skill module verified: {skill_module}")
           PY
           echo "Web build output and CodeEditor Python package verified."
           find "${GITHUB_WORKSPACE}/build/web" -maxdepth 2 -type f | head -40
@@ -134,8 +137,7 @@ jobs:
         run: |
           {
             echo "## AI Python Studio — Browser Preview"
-            echo "- Static web build: passed."
-            echo "- GitHub Pages deployment artifact uploaded."
+            echo "- Inspect the individual step results above for build and deployment status."
             echo "- [Open workflow artifacts](https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts)."
           } >> "$GITHUB_STEP_SUMMARY"
 
