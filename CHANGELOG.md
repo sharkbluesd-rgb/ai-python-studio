@@ -8,12 +8,15 @@
 - Clamped package installation timeouts and normalized pip startup failures.
 - Added regression tests for package option/URL injection, oversized requirements, excessive package counts and timeout handling.
 - Applied the shared strict GitHub owner/repository and branch validators in the editor's upload/build flow.
+- Required fresh explicit consent for every AI-provider request and stopped echoing invalid package input in validation errors.
+- Added a separate Flet CodeEditor browser compatibility app and deployed it alongside the responsive static preview.
 - Corrected web-preview documentation to distinguish the published static browser mock from the full Flet application.
 
 ### Validation status
 - The GitHub Actions run for the current feature branch passed Python compilation, unit tests, Ruff, Bandit and pip-audit before entering the APK build step.
 - APK build and upload are still pending final workflow completion.
-- Full Flet web compatibility and physical Android interaction remain unverified.
+- The isolated CodeEditor web app built and deployed successfully; manual browser interaction and full `src/main.py` web compatibility remain unverified.
+- Physical Android interaction and live Gemini/OpenAI provider requests remain unverified.
 
 ## 1.2.0 — 2026-11-22
 
