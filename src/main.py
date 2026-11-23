@@ -18,7 +18,7 @@ from file_tree import build_tree_entries
 from project_tools import analyze_project as inspect_project, format_analysis_report
 from workspace import MAX_ARCHIVE_BYTES, WorkspaceError, WorkspaceStore
 from package_manager import PackageManagerError, parse_requirements, install_packages, list_installed
-from github_cloud import GitHubClient, GitHubError, select_dispatched_run
+from github_cloud import (\n    GitHubClient, GitHubError, select_dispatched_run,\n    validate_branch, validate_repository,\n)
 from skills_manager import SkillsManager, SkillsError
 from ai_assistant import AIProviderError, generate_reply
 
@@ -1411,12 +1411,11 @@ def _build_main(page: ft.Page) -> None:
     def parse_github_repository():
         value = (github_repository.value or "").strip().strip("/")
         parts = value.split("/")
-        if len(parts) != 2 or any(not part or part in {".", ".."} for part in parts):
+        if len(parts) != 2:
             raise GitHubError("اكتب المستودع بالصيغة owner/repository.")
-        branch = (github_branch.value or "").strip()
-        if not branch or branch.startswith("-") or ".." in branch:
-            raise GitHubError("اسم الفرع غير صالح.")
-        return parts[0], parts[1], branch
+        owner, repository = validate_repository(parts[0], parts[1])
+        branch = validate_branch(github_branch.value or "")
+        return owner, repository, branch
 
     async def upload_project_to_github(e) -> None:
         client = github_state.get("client")
