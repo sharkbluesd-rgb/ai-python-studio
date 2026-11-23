@@ -597,7 +597,8 @@ def _build_main(page: ft.Page) -> None:
             save_current_file()
         except WorkspaceError as exc:
             output_text.value = str(exc)
-            output_text.color = DANGER            set_status("تعذر حفظ الملف قبل الاختبارات.", DANGER)
+            output_text.color = DANGER
+            set_status("تعذر حفظ الملف قبل الاختبارات.", DANGER)
             page.update()
             return
         disconnect_github_before_untrusted_code("تشغيل اختبارات المشروع")
