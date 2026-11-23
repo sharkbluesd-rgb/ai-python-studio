@@ -39,6 +39,13 @@ class PackageManagerTests(unittest.TestCase):
         with self.assertRaises(PackageManagerError):
             parse_requirements(None)
 
+    def test_invalid_package_errors_do_not_echo_credentials(self):
+        secret_url = "https://user:private-password@example.com/package.whl"
+        with self.assertRaises(PackageManagerError) as raised:
+            parse_requirements(secret_url)
+        self.assertNotIn("private-password", str(raised.exception))
+        self.assertNotIn("user:", str(raised.exception))
+
     def test_bounds_requirements_size_and_line_count(self):
         with self.assertRaisesRegex(PackageManagerError, "64 كيلوبايت"):
             parse_requirements("x" * (64 * 1024 + 1))
