@@ -1,0 +1,97 @@
+name: Build and deploy AI Python Studio Web Preview
+
+on:
+  push:
+    branches:
+      - feature/studio-2.0
+    paths:
+      - "src/web_preview.py"
+      - "tests/test_web_preview.py"
+      - "pyproject.toml"
+      - ".github/workflows/web-preview.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: pages-preview
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FLET_CLI_NO_RICH_OUTPUT: "1"
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  build:
+    name: Build browser preview with bundled CodeEditor extension
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Flet and project dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install "flet-cli==1.1.2"
+
+      - name: Compile Python source
+        run: python -m compileall -q src tests
+
+      - name: Run browser preview tests
+        env:
+          PYTHONPATH: src
+        run: python -m unittest discover -s tests -p "test_web_preview.py" -v
+
+      - name: Build static web app with custom Flutter extensions
+        run: >-
+          flet build web src/web_preview.py
+          --yes
+          --verbose
+          --base-url "/ai-python-studio/"
+          --route-url-strategy hash
+
+      - name: Verify web build output
+        run: |
+          test -s build/web/index.html
+          test -d build/web
+          echo "Web build output exists."
+          find build/web -maxdepth 2 -type f | head -40
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: build/web
+          name: ai-python-studio-web-preview
+          retention-days: 14
+
+  deploy:
+    name: Publish browser preview
+    if: github.ref == 'refs/heads/feature/studio-2.0'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+      contents: read
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy preview to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
+        with:
+          artifact_name: github-pages
