@@ -60,6 +60,7 @@ jobs:
           --verbose
           --base-url "/ai-python-studio/"
           --route-url-strategy hash
+          --output build/web
 
       - name: Verify web build output
         run: |
