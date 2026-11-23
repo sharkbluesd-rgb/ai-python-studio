@@ -1820,7 +1820,9 @@ def _build_main(page: ft.Page) -> None:
         color=MUTED,
         selectable=True,
     )
-    skills_count = ft.Text("", size=11, color=SUCCESS)    def show_skill_detail(skill_name: str) -> None:
+    skills_count = ft.Text("", size=11, color=SUCCESS)
+
+    def show_skill_detail(skill_name: str) -> None:
         try:
             document = skills_manager.get_skill(skill_name)
             skills_detail.value = (
