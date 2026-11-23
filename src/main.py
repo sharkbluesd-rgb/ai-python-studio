@@ -112,6 +112,7 @@ def _build_main(page: ft.Page) -> None:
         active_file = "main.py" if "main.py" in available_files else available_files[0]
 
     tabs = OpenFileTabs(active_file)
+    dirty_files: set[str] = set()
 
     editor = fce.CodeEditor(
         value=store.read_file(active_project, active_file),
@@ -162,14 +163,18 @@ def _build_main(page: ft.Page) -> None:
         text_size=12, dense=True, expand=True,
     )
     package_state = {"busy": False}
-    run_button = ft.Button(content="تشغيل Python", bgcolor="#237A55", color="white")
+    run_button = ft.Button(content="تشغيل", bgcolor="#237A55", color="white")
     test_button = ft.Button(content="اختبارات المشروع", bgcolor="#34466B", color="white")
     stop_button = ft.Button(
-        content="إيقاف التنفيذ", bgcolor="#8B3038",
+        content="إيقاف", bgcolor="#8B3038",
         color="white", disabled=True,
     )
     run_state = {"running": False, "control": None}
     autosave_state = {"revision": 0}
+    output_state = {"expanded": False}
+    output_toggle_button = ft.Button(
+        content="المخرجات", on_click=lambda e: toggle_output_panel()
+    )
     file_picker = ft.FilePicker()
     page.services.append(file_picker)
     # GitHub credentials are deliberately session-only and never written to disk.
@@ -217,6 +222,9 @@ def _build_main(page: ft.Page) -> None:
         autosave_state["revision"] += 1
         store.write_file(active_project, active_file, current_code())
         store.save_settings(active_project, active_file)
+        dirty_files.discard(active_file)
+        active_file_label.value = active_file
+        refresh_tab_buttons()
         if show_status:
             set_status("تم حفظ الملف على الجهاز.", SUCCESS)
 
@@ -242,7 +250,7 @@ def _build_main(page: ft.Page) -> None:
                 ft.Row(
                     controls=[
                         ft.Button(
-                            content=name,
+                            content=(f"● {name}" if name in dirty_files else name),
                             on_click=lambda e, selected=name: open_file(selected),
                             bgcolor=ACCENT if is_active else "#202A3A",
                             color="white",
@@ -300,7 +308,7 @@ def _build_main(page: ft.Page) -> None:
                     )
                 )
 
-        active_file_label.value = active_file
+        active_file_label.value = f"● {active_file}" if active_file in dirty_files else active_file
         refresh_tab_buttons()
 
     def refresh_project_summary() -> None:
@@ -380,6 +388,9 @@ def _build_main(page: ft.Page) -> None:
             store.write_file(active_project, active_file, current_code())
             store.save_settings(active_project, active_file)
             if revision == autosave_state["revision"]:
+                dirty_files.discard(active_file)
+                active_file_label.value = active_file
+                refresh_tab_buttons()
                 set_status("تم الحفظ تلقائياً · كل التغييرات محفوظة", SUCCESS)
                 page.update()
         except WorkspaceError as exc:
@@ -390,6 +401,9 @@ def _build_main(page: ft.Page) -> None:
     def on_editor_change(e: ft.Event[fce.CodeEditor]) -> None:
         if e.data is not None:
             editor.value = e.data
+        dirty_files.add(active_file)
+        active_file_label.value = f"● {active_file}"
+        refresh_tab_buttons()
         autosave_state["revision"] += 1
         revision = autosave_state["revision"]
         set_status("تغييرات غير محفوظة · جارٍ الحفظ…", "#E4C27A")
@@ -1046,7 +1060,7 @@ def _build_main(page: ft.Page) -> None:
         border_radius=13,
         padding=3,
         rtl=False,
-        height=max(300, min(620, (getattr(page, "height", None) or 800) * 0.56)),
+        height=max(260, min(760, (getattr(page, "height", None) or 800) * 0.64)),
     )
 
     def update_editor_viewport(e=None) -> None:
@@ -1054,10 +1068,8 @@ def _build_main(page: ft.Page) -> None:
         media = getattr(page, "media", None)
         view_insets = getattr(media, "view_insets", None)
         keyboard_inset = getattr(view_insets, "bottom", 0) if view_insets else 0
-        editor_frame.height = max(
-            280,
-            min(620, (available_height - min(keyboard_inset, available_height * 0.45)) * 0.56),
-        )
+        usable_height = available_height - min(keyboard_inset, available_height * 0.5)
+        editor_frame.height = max(260, min(760, usable_height * 0.64))
         page.update()
 
     page.on_resize = update_editor_viewport
@@ -1641,19 +1653,13 @@ def _build_main(page: ft.Page) -> None:
             ft.Row(
                 controls=[
                     run_button,
-                    test_button,
                     stop_button,
-                    ft.Button(content="فحص", on_click=check_current_syntax),
                     ft.Button(content="حفظ", on_click=lambda e: save_and_update()),
+                    ft.Button(content="الملفات", on_click=toggle_file_explorer),
+                    ft.Button(content="المزيد", on_click=lambda e: show_screen("more")),
                 ],
-                wrap=True, spacing=7,
-            ),
-            ft.Row(
-                controls=[
-                    ft.Container(content=script_args_input, expand=True),
-                    ft.Button(content="مثال", on_click=load_example),
-                ],
-                spacing=7,
+                wrap=True,
+                spacing=6,
             ),
         ],
         spacing=8,
@@ -1679,9 +1685,9 @@ def _build_main(page: ft.Page) -> None:
                             ],
                             spacing=3, expand=True,
                         ),
-                        ft.Button(content="الملفات", on_click=toggle_file_explorer),
                         ft.Button(content="نسخ", on_click=duplicate_current_file),
                         ft.Button(content="حذف", on_click=delete_file, bgcolor="#422832", color="#FFD8DE"),
+                        output_toggle_button,
                     ],
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -1691,15 +1697,9 @@ def _build_main(page: ft.Page) -> None:
                     padding=ft.Padding.symmetric(horizontal=2, vertical=5),
                     bgcolor="#0D1725",
                     border_radius=10,
+                    rtl=False,
                 ),
                 editor_frame,
-                ft.Row(
-                    controls=[
-                        ft.Button(content="طي الاستيرادات", on_click=fold_imports),
-                        ft.Button(content="طي التعليق", on_click=fold_first_comment),
-                    ],
-                    wrap=True, spacing=7,
-                ),
                 explorer_panel,
 
             ],
@@ -1757,6 +1757,38 @@ def _build_main(page: ft.Page) -> None:
                 ),
             ],
             spacing=11,
+        )
+    )
+
+    editor_tools_panel = make_panel(
+        ft.Column(
+            controls=[
+                section_heading("أدوات المحرر", "الاختبارات والفحص ووسائط التشغيل والطي"),
+                ft.Row(
+                    controls=[
+                        test_button,
+                        ft.Button(content="فحص الصياغة", on_click=check_current_syntax),
+                    ],
+                    wrap=True,
+                    spacing=7,
+                ),
+                ft.Row(
+                    controls=[
+                        ft.Container(content=script_args_input, expand=True),
+                        ft.Button(content="مثال", on_click=load_example),
+                    ],
+                    spacing=7,
+                ),
+                ft.Row(
+                    controls=[
+                        ft.Button(content="طي الاستيرادات", on_click=fold_imports),
+                        ft.Button(content="طي التعليق", on_click=fold_first_comment),
+                    ],
+                    wrap=True,
+                    spacing=7,
+                ),
+            ],
+            spacing=10,
         )
     )
 
@@ -1825,8 +1857,17 @@ def _build_main(page: ft.Page) -> None:
             spacing=10,
             expand=True,
         ),
-        height=390,
+        height=320,
     )
+    output_panel.visible = False
+
+    def toggle_output_panel(e=None) -> None:
+        output_state["expanded"] = not output_state["expanded"]
+        output_panel.visible = output_state["expanded"]
+        output_toggle_button.content = (
+            "إخفاء النتائج" if output_state["expanded"] else "المخرجات"
+        )
+        page.update()
 
     # Local Agent Skills library — reference-only until an AI provider is connected.
     skills_search = ft.TextField(
@@ -2128,11 +2169,11 @@ def _build_main(page: ft.Page) -> None:
             spacing=12, scroll=ft.ScrollMode.AUTO, expand=True,
         ),
         "editor": ft.Column(
-            controls=[toolbar, editor_panel],
-            spacing=12, scroll=ft.ScrollMode.AUTO, expand=True,
+            controls=[toolbar, editor_panel, output_panel],
+            spacing=10, scroll=ft.ScrollMode.AUTO, expand=True,
         ),
         "tools": ft.Column(
-            controls=[search_panel, project_tools_panel],
+            controls=[search_panel, project_tools_panel, editor_tools_panel],
             spacing=12, scroll=ft.ScrollMode.AUTO, expand=True,
         ),
         "packages": ft.Column(
@@ -2140,7 +2181,7 @@ def _build_main(page: ft.Page) -> None:
             spacing=12, scroll=ft.ScrollMode.AUTO, expand=True,
         ),
         "terminal": ft.Column(
-            controls=[output_panel],
+            controls=[],
             spacing=12, scroll=ft.ScrollMode.AUTO, expand=True,
         ),
         "github": ft.Column(
@@ -2157,14 +2198,16 @@ def _build_main(page: ft.Page) -> None:
         ),
     }
 
-    screen_host = ft.Container(content=screens["editor"], expand=True, padding=10)
+    # The results destination is the editor with its output drawer expanded.
+    screens["terminal"] = screens["editor"]
+    screen_host = ft.Container(content=screens["editor"], expand=True, padding=8)
     nav_buttons = {}
     # Keep the primary mobile navigation focused; secondary tools live under "More".
     navigation_items = [
         ("projects", "▦", "المشاريع"),
         ("editor", "⌨", "المحرر"),
         ("tools", "⌕", "الأدوات"),
-        ("terminal", "▤", "الطرفية"),
+        ("terminal", "▤", "النتائج"),
         ("more", "⋯", "المزيد"),
     ]
     active_screen = {"name": "editor"}
@@ -2172,6 +2215,10 @@ def _build_main(page: ft.Page) -> None:
     def show_screen(name: str) -> None:
         if name not in screens:
             return
+        if name == "terminal":
+            output_state["expanded"] = True
+            output_panel.visible = True
+            output_toggle_button.content = "إخفاء النتائج"
         active_screen["name"] = name
         screen_host.content = screens[name]
         selected_tab = name if name in nav_buttons else "more"
