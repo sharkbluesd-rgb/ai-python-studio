@@ -1838,7 +1838,8 @@ def _build_main(page: ft.Page) -> None:
 
     def refresh_skills_catalog(query: str = "") -> None:
         try:
-            items = skills_manager.search(query, limit=60)            skills_catalog.controls = []
+            items = skills_manager.search(query, limit=60)
+            skills_catalog.controls = []
             for item in items:
                 skills_catalog.controls.append(                    ft.Container(
                         content=ft.Column(
