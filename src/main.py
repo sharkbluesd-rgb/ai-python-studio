@@ -19,6 +19,7 @@ from project_tools import analyze_project as inspect_project, format_analysis_re
 from workspace import MAX_ARCHIVE_BYTES, WorkspaceError, WorkspaceStore
 from package_manager import PackageManagerError, parse_requirements, install_packages, list_installed
 from github_cloud import GitHubClient, GitHubError, select_dispatched_run
+from skills_manager import SkillsManager, SkillsError
 
 
 APP_BG = "#080D16"
@@ -88,6 +89,7 @@ def _build_main(page: ft.Page) -> None:
     print("[AI Python Studio] Initial loading screen displayed.", flush=True)
 
     store = WorkspaceStore()
+    skills_manager = SkillsManager()
 
     page.title = "AI Python Studio"
     page.theme_mode = ft.ThemeMode.DARK
@@ -1761,6 +1763,139 @@ def _build_main(page: ft.Page) -> None:
         height=390,
     )
 
+    # Local Agent Skills library — reference-only until an AI provider is connected.
+    skills_search = ft.TextField(
+        hint_text="ابحث عن مهارة: Flet، Python، أمان، اختبار...",
+        text_size=13,
+        on_change=lambda e: refresh_skills_catalog(e.control.value or ""),
+    )
+    skills_catalog = ft.Column(controls=[], spacing=8, scroll=ft.ScrollMode.AUTO)
+    skills_detail = ft.Text(
+        "اختر مهارة من القائمة لعرض تعليماتها.",
+        size=11,
+        color=MUTED,
+        selectable=True,
+    )
+    skills_count = ft.Text("", size=11, color=SUCCESS)
+
+    def show_skill_detail(skill_name: str) -> None:
+        try:
+            document = skills_manager.get_skill(skill_name)
+            skills_detail.value = (
+                f"# {document.summary.label_ar} ({document.summary.name})\n\n"
+                f"{document.summary.description}\n\n"
+                f"{document.content}"
+            )
+            skills_detail.color = TEXT
+            set_status(f"تم فتح المهارة: {skill_name}", SUCCESS)
+        except SkillsError as exc:
+            skills_detail.value = str(exc)
+            skills_detail.color = DANGER
+            set_status("تعذر فتح المهارة.", DANGER)
+        page.update()
+
+    def refresh_skills_catalog(query: str = "") -> None:
+        try:
+            items = skills_manager.search(query, limit=60)
+            skills_catalog.controls = []
+            for item in items:
+                skills_catalog.controls.append(
+                    ft.Container(
+                        content=ft.Column(
+                            controls=[
+                                ft.Row(
+                                    controls=[
+                                        ft.Text(
+                                            item.label_ar,
+                                            size=13,
+                                            weight=ft.FontWeight.BOLD,
+                                            color="#C9C2FF",
+                                            expand=True,
+                                        ),
+                                        ft.Text(item.name, size=9, color=MUTED),
+                                    ],
+                                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                                ),
+                                ft.Text(
+                                    item.description,
+                                    size=10,
+                                    color=MUTED,
+                                    max_lines=3,
+                                ),
+                                ft.Button(
+                                    content="عرض التعليمات",
+                                    on_click=lambda e, selected=item.name: show_skill_detail(selected),
+                                ),
+                            ],
+                            spacing=6,
+                        ),
+                        bgcolor="#0D1725",
+                        border=ft.Border.all(1, "#26354C"),
+                        border_radius=10,
+                        padding=10,
+                    )
+                )
+            skills_count.value = f"المهارات المتاحة: {len(items)}"
+            skills_count.color = SUCCESS
+            if not items:
+                skills_catalog.controls.append(
+                    ft.Text("لا توجد مهارة مطابقة لعبارة البحث.", size=11, color=MUTED)
+                )
+        except SkillsError as exc:
+            skills_count.value = f"تعذر تحميل المكتبة: {exc}"
+            skills_count.color = DANGER
+        page.update()
+
+    skills_panel = make_panel(
+        ft.Column(
+            controls=[
+                section_heading("مكتبة مهارات الذكاء", "إجراءات احترافية للبرمجة والاختبار والأمان وبناء تطبيقات Flet"),
+                ft.Text(
+                    "المهارات ملفات إرشادية قابلة للبحث والتحميل. يستطيع محرك المكتبة اختيار أفضل المهارات المطابقة وتجهيز سياق مختصر للمساعد الذكي عند ربط مزود AI.",
+                    size=11,
+                    color=MUTED,
+                ),
+                skills_search,
+                skills_count,
+                ft.Container(
+                    content=skills_catalog,
+                    height=350,
+                    bgcolor="#0A111D",
+                    border=ft.Border.all(1, "#26354C"),
+                    border_radius=12,
+                    padding=8,
+                ),
+                ft.Text(
+                    "المهارات لا تثبّت مكتبات ولا تشغّل سكربتات تلقائياً. مزود الذكاء الاصطناعي لم يتم ربطه بعد؛ المكتبة ومحرك اختيار السياق جاهزان للتكامل.",
+                    size=10,
+                    color="#DDBB78",
+                ),
+            ],
+            spacing=10,
+        )
+    )
+    skills_detail_panel = make_panel(
+        ft.Column(
+            controls=[
+                section_heading("تفاصيل المهارة", "اقرأ الإرشادات قبل استخدامها"),
+                ft.Container(
+                    content=ft.Column(
+                        controls=[skills_detail],
+                        scroll=ft.ScrollMode.AUTO,
+                        spacing=6,
+                    ),
+                    height=360,
+                    bgcolor="#080E17",
+                    border=ft.Border.all(1, "#26354C"),
+                    border_radius=12,
+                    padding=12,
+                ),
+            ],
+            spacing=9,
+        )
+    )
+    refresh_skills_catalog()
+
     safety_note = ft.Text(
         "تنبيه أمني: تشغيل Python محلياً ليس بيئة معزولة. شغّل الأكواد التي تثق بها فقط.",
         color="#DDBB78", size=10,
@@ -1792,6 +1927,10 @@ def _build_main(page: ft.Page) -> None:
             controls=[github_panel],
             spacing=12, scroll=ft.ScrollMode.AUTO, expand=True,
         ),
+        "skills": ft.Column(
+            controls=[skills_panel, skills_detail_panel],
+            spacing=12, scroll=ft.ScrollMode.AUTO, expand=True,
+        ),
     }
 
     screen_host = ft.Container(content=screens["editor"], expand=True, padding=12)
@@ -1803,6 +1942,7 @@ def _build_main(page: ft.Page) -> None:
         ("packages", "◇", "الحزم"),
         ("terminal", "▤", "النتائج"),
         ("github", "◈", "GitHub"),
+        ("skills", "✧", "المهارات"),
     ]
     active_screen = {"name": "editor"}
 

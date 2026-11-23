@@ -25,6 +25,14 @@ A mobile-first Python development workspace built with Flet for Android.
 - Pre-build validation for Android Flet projects, including manual workflow dispatch and artifact upload; APK download is allowed only after a successful run and APK structure verification.
 - Upload guard that blocks common GitHub/AWS token patterns, private-key headers, secret-like assignments, and environment files.
 
+## Agent Skills Library
+
+The application bundles a searchable set of specialist `SKILL.md` references for repository reconnaissance, test-driven development, safe refactoring, code review, threat modelling, prompt-injection defence, AI-agent architecture, prompt engineering, agent evaluation, Flet mobile/web development, Python debugging and Android release verification.
+
+The Skills Manager parses skill metadata, searches Arabic/English keywords, loads full instructions on demand and can prepare a size-bounded context pack for an AI provider. Imported skills retain their individual licence files. The loader treats skills as untrusted reference text and never executes scripts from a skill directory.
+
+**Current limitation:** this release does not yet include a configured AI model/provider or chat assistant. The library and context-selection interface are installed and ready for integration; they do not independently change the underlying model or make the app autonomous. See `src/agent_skills/THIRD_PARTY_NOTICES.md` for attribution and licence information.
+
 ## Development
 
 Python 3.10+ is required.

@@ -1,0 +1,82 @@
+from __future__ import annotations
+
+import tempfile
+import unittest
+from pathlib import Path
+
+from skills_manager import SkillsError, SkillsManager, parse_skill_metadata
+
+
+class SkillMetadataTests(unittest.TestCase):
+    def test_parses_folded_description(self):
+        text = "---\nname: python-helper\ndescription: >-\n  Helps write Python.\n  Includes tests.\n---\n\nBody"
+        result = parse_skill_metadata(text, "development/python-helper/SKILL.md")
+        self.assertEqual(result.name, "python-helper")
+        self.assertEqual(result.description, "Helps write Python. Includes tests.")
+        self.assertEqual(result.category, "development")
+
+    def test_rejects_invalid_name(self):
+        text = "---\nname: ../bad\ndescription: Bad\n---\nBody"
+        with self.assertRaises(SkillsError):
+            parse_skill_metadata(text)
+
+
+class SkillsManagerTests(unittest.TestCase):
+    def setUp(self):
+        self.manager = SkillsManager()
+
+    def test_bundled_catalog_contains_core_skills(self):
+        names = {item.name for item in self.manager.list_skills()}
+        self.assertIn("flet-mobile-development", names)
+        self.assertIn("test-driven-development", names)
+        self.assertIn("code-review", names)
+        self.assertGreaterEqual(len(names), 12)
+
+    def test_flet_search_prioritises_flet_skill(self):
+        matches = self.manager.search("Flet Android APK web editor", limit=5)
+        self.assertTrue(matches)
+        self.assertEqual(matches[0].name, "flet-mobile-development")
+
+    def test_arabic_search_finds_python_android_guides(self):
+        matches = self.manager.search("تصحيح أخطاء بايثون", limit=5)
+        self.assertTrue(matches)
+        self.assertEqual(matches[0].name, "python-debugging")
+
+    def test_load_skill_returns_full_content(self):
+        document = self.manager.get_skill("repo-recon")
+        self.assertIn("Search before assuming", document.content)
+        self.assertEqual(document.summary.name, "repo-recon")
+
+    def test_context_is_bounded_and_marks_skills_untrusted(self):
+        context = self.manager.build_context("Python Flet Android", max_skills=2, max_chars=6000)
+        self.assertIn("غير موثوقة", context)
+        self.assertIn("<skill_reference", context)
+        self.assertLessEqual(len(context), 6100)
+
+    def test_unknown_skill_is_rejected(self):
+        with self.assertRaises(SkillsError):
+            self.manager.get_skill("../outside")
+
+
+class SkillsPathSafetyTests(unittest.TestCase):
+    def test_symlinked_skill_is_ignored(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "skills"
+            external = Path(tmp) / "external"
+            (external / "fake").mkdir(parents=True)
+            (external / "fake" / "SKILL.md").write_text(
+                "---\nname: fake-skill\ndescription: Fake\n---\nBody",
+                encoding="utf-8",
+            )
+            root.mkdir()
+            (root / "development").mkdir()
+            try:
+                (root / "development" / "fake").symlink_to(external / "fake", target_is_directory=True)
+            except (OSError, NotImplementedError):
+                self.skipTest("Symlinks are not available in this environment.")
+            manager = SkillsManager(root)
+            self.assertEqual(manager.list_skills(), [])
+
+
+if __name__ == "__main__":
+    unittest.main()

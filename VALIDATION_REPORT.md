@@ -99,3 +99,14 @@ Still required before calling this release fully verified:
 
 - The initial generated web artifact referenced Pyodide from the public CDN. To make the browser test less dependent on external CDN reachability, the preview workflow now builds with Flet's `--no-cdn` option, bundling Pyodide, CanvasKit and fonts into the static output.
 - This increases artifact size; the updated no-CDN artifact must complete its own CI build and browser/device validation before it can be treated as verified.
+
+
+## Agent Skills integration — 2026-11-23
+
+- Bundled 12 specialist skills under `src/agent_skills`, including nine selected MIT-licensed skills from JPeetz/agent-skills and three project-authored Flet/Python/Android workflows.
+- Preserved individual licence files and supporting Markdown references for imported skills.
+- Added `SkillsManager` with bounded UTF-8 reads, YAML-frontmatter parsing, path/symlink checks, Arabic/English relevance search, lazy loading and bounded context assembly.
+- Added an in-app Skills screen for searching and reading skills.
+- Imported skill instructions are treated as untrusted reference data; the loader does not execute attached scripts or network/file actions described in skill text.
+- The AI provider/chat assistant is not configured in this release. Context selection is an integration interface for the planned AI assistant, not proof that the model is currently consuming these skills.
+- Automated validation on this commit is still required; physical Android UI validation remains separate.
