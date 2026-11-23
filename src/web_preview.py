@@ -85,6 +85,7 @@ def main(page: ft.Page) -> None:
         "ستظهر هنا نتيجة فحص الصياغة.", size=12, color=MUTED, selectable=True
     )
     file_buttons = ft.Row(wrap=True, spacing=6)
+    file_button_refs = {}
 
     editor = fce.CodeEditor(
         value=source_files["main.py"],
@@ -142,13 +143,12 @@ def main(page: ft.Page) -> None:
         editor.value = source_files[name]
         editor.language = fce.CodeLanguage.PYTHON
         current_file.value = name
-        for file_name, button in file_buttons.controls_by_name.items():
+        for file_name, button in file_button_refs.items():
             button.bgcolor = ACCENT if file_name == name else "#202A3A"
         set_status(f"تم فتح {name}.", SUCCESS)
         page.update()
 
     # Keep stable references so file selection can update the active state.
-    file_buttons.controls_by_name = {}
     for name in STARTER_FILES:
         button = ft.Button(
             content=name,
@@ -157,7 +157,7 @@ def main(page: ft.Page) -> None:
             on_click=lambda e, selected=name: select_file(selected),
         )
         file_buttons.controls.append(button)
-        file_buttons.controls_by_name[name] = button
+        file_button_refs[name] = button
 
     header = ft.Container(
         content=ft.Row(
