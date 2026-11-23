@@ -34,6 +34,14 @@ CATALOG = [
 
 
 class WebPreviewValidationTests(unittest.TestCase):
+    def test_main_builds_initial_screen_without_startup_exception(self):
+        from unittest.mock import Mock
+
+        page = Mock()
+        web_preview.main(page)
+        page.add.assert_called_once()
+        self.assertIsNotNone(page.theme)
+        self.assertIsNotNone(page.dark_theme)
     def test_browser_preview_avoids_custom_flutter_editor_extension(self):
         source = inspect.getsource(web_preview)
         self.assertNotIn("import flet_code_editor", source)
