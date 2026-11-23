@@ -36,6 +36,9 @@ SKILL_LABELS_AR = {
     "github-actions-ci-debugging": "تشخيص GitHub Actions والبناء السحابي",
     "python-ide-runtime": "هندسة بيئة تشغيل محرر Python",
     "regression-testing": "اختبارات الانحدار والجودة",
+    "security-and-hardening": "تأمين التطبيق وحماية البيانات",
+    "performance-optimization": "تحليل الأداء وتحسين السرعة",
+    "frontend-ui-engineering": "تصميم واجهات Flet وRTL",
 }
 
 SKILL_ARABIC_TERMS = {
@@ -59,6 +62,9 @@ SKILL_ARABIC_TERMS = {
     "github-actions-ci-debugging": "GitHub Actions workflow CI logs jobs permissions artifacts failures build APK",
     "python-ide-runtime": "محرر Python IDE runtime execution terminal packages cancellation sandbox filesystem",
     "regression-testing": "اختبارات انحدار تكامل smoke test regression browser UI test quality",
+    "security-and-hardening": "أمان حماية التطبيق مفاتيح API كلمات المرور التحقق من المدخلات SSRF prompt injection dependencies",
+    "performance-optimization": "بطء التطبيق تحسين الأداء سرعة Flet APK الويب الذاكرة profiling قياس",
+    "frontend-ui-engineering": "تصميم واجهة Flet RTL العربية الهاتف أندرويد responsive accessibility تجربة المستخدم",
 }
 
 
