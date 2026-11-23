@@ -11,7 +11,6 @@ import re
 from urllib.parse import quote
 
 import flet as ft
-import flet_code_editor as fce
 
 try:
     from web_skill_catalog import SKILL_CATALOG
@@ -191,17 +190,18 @@ def main(page: ft.Page) -> None:
     file_buttons = ft.Row(wrap=True, spacing=6)
     file_button_refs = {}
 
-    editor = fce.CodeEditor(
+    # Browser preview uses built-in Flet controls only; avoid a custom Flutter extension
+    # that can prevent the app bundle from mounting on some mobile browsers.
+    editor = ft.TextField(
         value=source_files["main.py"],
-        language=fce.CodeLanguage.PYTHON,
-        code_theme=fce.CodeTheme.ATOM_ONE_DARK,
-        autocomplete=True,
-        autocomplete_words=AUTOCOMPLETE_WORDS,
-        gutter_style=fce.GutterStyle(
-            show_line_numbers=True, show_folding_handles=True, show_errors=True, width=48
-        ),
-        text_style=ft.TextStyle(size=14, font_family="monospace"),
-        padding=12, autofocus=False, expand=True, rtl=False,
+        multiline=True,
+        min_lines=16,
+        max_lines=28,
+        text_size=14,
+        rtl=False,
+        border=ft.InputBorder.NONE,
+        content_padding=12,
+        expand=True,
     )
 
     def set_status(message: str, color: str = MUTED) -> None:
@@ -209,8 +209,6 @@ def main(page: ft.Page) -> None:
         status.color = color
 
     def on_editor_change(e: ft.Event[fce.CodeEditor]) -> None:
-        if e.data is not None:
-            editor.value = e.data
         source_files[active_file["name"]] = editor.value or ""
         set_status("هناك تغييرات في الملف الحالي.", "#E4C27A")
         page.update()
