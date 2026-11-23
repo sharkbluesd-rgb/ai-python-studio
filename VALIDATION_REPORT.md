@@ -93,3 +93,9 @@ Still required before calling this release fully verified:
 - Job-log ZIP extraction now limits the number of text entries, per-entry decompressed size and total decompressed size to reduce ZIP-bomb memory exhaustion.
 - Two regression tests cover excessive log entry count and oversized uncompressed log members.
 - The app version label is synchronized with the 1.2.0 package/workflow version.
+
+
+### Browser preview packaging follow-up
+
+- The initial generated web artifact referenced Pyodide from the public CDN. To make the browser test less dependent on external CDN reachability, the preview workflow now builds with Flet's `--no-cdn` option, bundling Pyodide, CanvasKit and fonts into the static output.
+- This increases artifact size; the updated no-CDN artifact must complete its own CI build and browser/device validation before it can be treated as verified.

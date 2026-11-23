@@ -80,6 +80,7 @@ jobs:
           --verbose
           --base-url "/ai-python-studio/"
           --route-url-strategy hash
+          --no-cdn
           --output "${GITHUB_WORKSPACE}/build/web"
 
       - name: Verify web build and bundled CodeEditor dependency
