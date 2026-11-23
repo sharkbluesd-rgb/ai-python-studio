@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: pages-preview
+  group: pages-preview-static
   cancel-in-progress: true
 
 permissions:
