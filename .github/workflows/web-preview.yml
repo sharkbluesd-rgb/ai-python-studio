@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: pages-preview
+  group: pages-preview-${{ github.sha }}
   cancel-in-progress: false
 
 permissions:
