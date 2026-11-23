@@ -59,7 +59,7 @@ The current local runner executes code with exec() inside the app process. It is
 
 ## Deliberate limitations in this release
 
-The project does not yet bundle a separate Python distribution or a general-purpose `pip` environment for Android. The package manager installs requested packages into the Python interpreter used by the app; compatibility depends on Android-compatible wheels and successful native imports. Installing a package does not guarantee that its dependencies support Android. AI providers, a native shell terminal, and an interactive debugger are not included in this release. The GitHub integration requires a GitHub OAuth App with Device Flow enabled and requests repo and workflow scopes to update files and run Actions. These scopes are broad; review the permissions on GitHub before authorizing.
+The project does not yet bundle a separate Python distribution or a general-purpose `pip` environment for Android. The package manager installs requested packages into the Python interpreter used by the app; compatibility depends on Android-compatible wheels and successful native imports. Installing a package does not guarantee that its dependencies support Android. A native shell terminal and a full interactive debugger are not included in this release. AI use requires the user to supply a valid Gemini or OpenAI API key and an internet connection; provider billing and quotas apply. The GitHub integration requires a GitHub OAuth App with Device Flow enabled and requests repo and workflow scopes to update files and run Actions. These scopes are broad; review the permissions on GitHub before authorizing.
 
 
 ## GitHub setup
