@@ -597,8 +597,7 @@ def _build_main(page: ft.Page) -> None:
             save_current_file()
         except WorkspaceError as exc:
             output_text.value = str(exc)
-            output_text.color = DANGER            set_status("تعذر حفظ الملف قبل الاختبارات.", DANGER)            page.update()
-            return
+            output_text.color = DANGER            set_status("تعذر حفظ الملف قبل الاختبارات.", DANGER)            page.update()            return
 
         disconnect_github_before_untrusted_code("تشغيل اختبارات المشروع")
         project_path = str(store._project_dir(active_project))
@@ -1048,7 +1047,7 @@ def _build_main(page: ft.Page) -> None:
             content=content,
             padding=padding,
             bgcolor=PANEL,
-            border=ft.Border.all(1, "#243147"),
+            border=ft.Border.all(1, "#26364D"),
             border_radius=radius,
             height=height,
         )
@@ -1059,44 +1058,45 @@ def _build_main(page: ft.Page) -> None:
         ]
         if subtitle:
             controls.append(ft.Text(subtitle, size=11, color=MUTED))
-        return ft.Column(controls=controls, spacing=3)
+        return ft.Column(controls=controls, spacing=4)
 
-    # Header
-    project_summary = ft.Text("", size=11, color=MUTED)
+    # Premium compact header: clear identity, active workspace and save state.
+    project_summary = ft.Text("", size=10, color=MUTED, max_lines=1)
     header = ft.Container(
         content=ft.Row(
             controls=[
                 ft.Container(
-                    content=ft.Text(
-                        "Py", size=20, weight=ft.FontWeight.BOLD, color="white"
-                    ),
-                    width=46, height=46, alignment=ft.Alignment.CENTER,
-                    bgcolor=ACCENT, border_radius=15,
+                    content=ft.Text("Py", size=19, weight=ft.FontWeight.BOLD, color="white"),
+                    width=42, height=42, alignment=ft.Alignment.CENTER,
+                    bgcolor=ACCENT, border_radius=13,
                 ),
                 ft.Column(
                     controls=[
-                        ft.Text(
-                            "AI Python Studio", size=18,
-                            weight=ft.FontWeight.BOLD, color=TEXT,
-                        ),
-                        ft.Text(
-                            "بيئة تطوير Python للهاتف", size=11, color=MUTED
-                        ),
+                        ft.Text("AI Python Studio", size=16, weight=ft.FontWeight.BOLD, color=TEXT),
+                        ft.Text("بيئة تطوير Python", size=10, color=MUTED),
+                        project_summary,
                     ],
                     spacing=2, expand=True,
                 ),
                 ft.Container(
-                    content=ft.Text("v1.2.0", size=10, color="#D8D3FF"),
-                    padding=ft.Padding.symmetric(horizontal=10, vertical=7),
-                    bgcolor="#252342", border_radius=20,
+                    content=ft.Row(
+                        controls=[
+                            ft.Container(width=6, height=6, bgcolor=SUCCESS, border_radius=8),
+                            ft.Text("جاهز", size=10, color=SUCCESS, weight=ft.FontWeight.BOLD),
+                        ],
+                        spacing=5,
+                    ),
+                    padding=ft.Padding.symmetric(horizontal=10, vertical=8),
+                    bgcolor="#142A29", border=ft.Border.all(1, "#285044"),
+                    border_radius=18,
                 ),
             ],
-            spacing=11,
+            spacing=10,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         ),
-        padding=ft.Padding.only(left=16, right=16, top=10, bottom=10),
-        bgcolor="#0E1623",
-        border=ft.Border.only(bottom=ft.BorderSide(1, "#243147")),
+        padding=ft.Padding.only(left=14, right=14, top=9, bottom=9),
+        bgcolor="#0C1420",
+        border=ft.Border.only(bottom=ft.BorderSide(1, "#26364D")),
     )
 
     # Android app configuration (used by the Flet Android project template).
@@ -1197,8 +1197,7 @@ def _build_main(page: ft.Page) -> None:
             token = await asyncio.to_thread(
                 GitHubClient.poll_device_authorization, github_state["client_id"], auth            )
             if not token:                github_status.value = "لم تتم الموافقة بعد. أكمل الخطوات في GitHub ثم أعد المحاولة."
-                github_status.color = ACCENT
-            else:
+                github_status.color = ACCENT            else:
                 client = GitHubClient(token)
                 user = await asyncio.to_thread(client.current_user)
                 old = github_state.get("client")
@@ -1554,18 +1553,28 @@ def _build_main(page: ft.Page) -> None:
         padding=16,
     )
 
-    # Editor screen: code comes first; file operations stay below it.
-    toolbar = ft.Row(
+    # Editor screen: a focused IDE workspace with clear primary actions.
+    toolbar = ft.Column(
         controls=[
-            script_args_input,
-            run_button,
-            test_button,
-            stop_button,
-            ft.Button(content="فحص", on_click=check_current_syntax),
-            ft.Button(content="حفظ", on_click=lambda e: save_and_update()),
-            ft.Button(content="مثال", on_click=load_example),
+            ft.Row(
+                controls=[
+                    run_button,
+                    test_button,
+                    stop_button,
+                    ft.Button(content="فحص", on_click=check_current_syntax),
+                    ft.Button(content="حفظ", on_click=lambda e: save_and_update()),
+                ],
+                wrap=True, spacing=7,
+            ),
+            ft.Row(
+                controls=[
+                    ft.Container(content=script_args_input, expand=True),
+                    ft.Button(content="مثال", on_click=load_example),
+                ],
+                spacing=7,
+            ),
         ],
-        wrap=True, spacing=7,
+        spacing=8,
     )
 
     editor_panel = make_panel(
@@ -1575,28 +1584,38 @@ def _build_main(page: ft.Page) -> None:
                     controls=[
                         ft.Column(
                             controls=[
-                                ft.Text("محرر الأكواد", size=15, weight=ft.FontWeight.BOLD, color=TEXT),
-                                active_file_label,
+                                ft.Text("محرر الأكواد", size=16, weight=ft.FontWeight.BOLD, color=TEXT),
+                                ft.Row(
+                                    controls=[
+                                        ft.Container(width=7, height=7, bgcolor=SUCCESS, border_radius=8),
+                                        active_file_label,
+                                        ft.Text("· Python", size=10, color=MUTED),
+                                    ],
+                                    spacing=6,
+                                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                                ),
                             ],
-                            spacing=2, expand=True,
+                            spacing=3, expand=True,
                         ),
                         ft.Button(content="نسخ", on_click=duplicate_current_file),
-                        ft.Button(content="حذف", on_click=delete_file),
+                        ft.Button(content="حذف", on_click=delete_file, bgcolor="#422832", color="#FFD8DE"),
                     ],
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
                 ft.Container(
                     content=tab_buttons,
-                    padding=ft.Padding.only(top=2, bottom=3),
+                    padding=ft.Padding.symmetric(horizontal=2, vertical=5),
+                    bgcolor="#0D1725",
+                    border_radius=10,
                 ),
                 ft.Container(
                     content=editor,
                     bgcolor=EDITOR_BG,
-                    border=ft.Border.all(1, "#26354C"),
-                    border_radius=14,
-                    padding=4,
-                    height=470,
+                    border=ft.Border.all(1, "#2A3B55"),
+                    border_radius=13,
+                    padding=3,
+                    height=560,
                 ),
                 ft.Row(
                     controls=[
@@ -1605,40 +1624,44 @@ def _build_main(page: ft.Page) -> None:
                     ],
                     wrap=True, spacing=7,
                 ),
-                ft.Divider(color="#26354C", height=1),
-                section_heading("ملفات المشروع", "اضغط على المجلد لعرض محتوياته أو اختر ملفاً لفتحه"),
+                ft.Divider(color="#26364D", height=1),
+                ft.Row(
+                    controls=[
+                        section_heading("مستكشف الملفات", "ملفات ومجلدات المشروع الحالي"),
+                        ft.Container(
+                            content=ft.Text("WORKSPACE", size=9, color="#BFB7FF", weight=ft.FontWeight.BOLD),
+                            bgcolor="#29264B", padding=ft.Padding.symmetric(horizontal=8, vertical=5),
+                            border_radius=12,
+                        ),
+                    ],
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
                 ft.Container(
                     content=tree_view,
-                    height=175,
-                    bgcolor="#0B1320",
-                    border=ft.Border.all(1, "#26354C"),
+                    height=220,
+                    bgcolor="#0A1320",
+                    border=ft.Border.all(1, "#26364D"),
                     border_radius=12,
                     padding=8,
                 ),
                 ft.Row(
-                    controls=[
-                        file_name_input,
-                        ft.Button(content="ملف جديد", on_click=create_file),
-                    ],
+                    controls=[file_name_input, ft.Button(content="ملف جديد", on_click=create_file, bgcolor=ACCENT, color="white")],
                     spacing=7,
                 ),
                 ft.Row(
-                    controls=[
-                        folder_name_input,
-                        ft.Button(content="مجلد جديد", on_click=create_folder),
-                    ],
+                    controls=[folder_name_input, ft.Button(content="مجلد جديد", on_click=create_folder)],
                     spacing=7,
                 ),
                 ft.Row(
-                    controls=[
-                        rename_input,
-                        ft.Button(content="إعادة تسمية", on_click=rename_current_file),
-                    ],
+                    controls=[rename_input, ft.Button(content="إعادة تسمية", on_click=rename_current_file)],
                     spacing=7,
                 ),
             ],
-            spacing=11,
-        )
+            spacing=12,
+        ),
+        padding=12,
+        radius=20,
     )
 
     # Search and project tools
@@ -1797,8 +1820,7 @@ def _build_main(page: ft.Page) -> None:
             for item in items:
                 skills_catalog.controls.append(                    ft.Container(
                         content=ft.Column(
-                            controls=[
-                                ft.Row(
+                            controls=[                                ft.Row(
                                     controls=[
                                         ft.Text(
                                             item.label_ar,
@@ -2089,7 +2111,7 @@ def _build_main(page: ft.Page) -> None:
         ),
     }
 
-    screen_host = ft.Container(content=screens["editor"], expand=True, padding=12)
+    screen_host = ft.Container(content=screens["editor"], expand=True, padding=10)
     nav_buttons = {}
     # Keep the primary mobile navigation focused; secondary tools live under "More".
     navigation_items = [
@@ -2221,8 +2243,8 @@ def _build_main(page: ft.Page) -> None:
             spacing=8,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         ),
-        padding=ft.Padding.symmetric(horizontal=16, vertical=8),
-        bgcolor="#0B1320",
+        padding=ft.Padding.symmetric(horizontal=14, vertical=9),
+        bgcolor="#0A121E",
     )
 
     page.clean()
