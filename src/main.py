@@ -1586,6 +1586,55 @@ def _build_main(page: ft.Page) -> None:
         padding=16,
     )
 
+    # Keep the editor focused; show project navigation only when requested.
+    explorer_visible = {"value": False}
+
+    def toggle_file_explorer(e=None) -> None:
+        explorer_visible["value"] = not explorer_visible["value"]
+        explorer_panel.visible = explorer_visible["value"]
+        page.update()
+
+    explorer_panel = ft.Container(
+        visible=False,
+        content=ft.Column(
+            controls=[
+                ft.Row(
+                    controls=[
+                        section_heading("مستكشف الملفات", "ملفات ومجلدات المشروع الحالي"),
+                        ft.Button(content="إغلاق", on_click=toggle_file_explorer),
+                    ],
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                ft.Container(
+                    content=tree_view,
+                    height=190,
+                    bgcolor="#0A1320",
+                    border=ft.Border.all(1, "#26364D"),
+                    border_radius=12,
+                    padding=8,
+                ),
+                ft.Row(
+                    controls=[file_name_input, ft.Button(content="ملف جديد", on_click=create_file, bgcolor=ACCENT, color="white")],
+                    spacing=7,
+                ),
+                ft.Row(
+                    controls=[folder_name_input, ft.Button(content="مجلد جديد", on_click=create_folder)],
+                    spacing=7,
+                ),
+                ft.Row(
+                    controls=[rename_input, ft.Button(content="إعادة تسمية", on_click=rename_current_file)],
+                    spacing=7,
+                ),
+            ],
+            spacing=9,
+        ),
+        padding=10,
+        bgcolor="#0D1725",
+        border=ft.Border.all(1, "#26364D"),
+        border_radius=12,
+    )
+
     # Editor screen: a focused IDE workspace with clear primary actions.
     toolbar = ft.Column(
         controls=[
@@ -1630,6 +1679,7 @@ def _build_main(page: ft.Page) -> None:
                             ],
                             spacing=3, expand=True,
                         ),
+                        ft.Button(content="الملفات", on_click=toggle_file_explorer),
                         ft.Button(content="نسخ", on_click=duplicate_current_file),
                         ft.Button(content="حذف", on_click=delete_file, bgcolor="#422832", color="#FFD8DE"),
                     ],
@@ -1650,39 +1700,8 @@ def _build_main(page: ft.Page) -> None:
                     ],
                     wrap=True, spacing=7,
                 ),
-                ft.Divider(color="#26364D", height=1),
-                ft.Row(
-                    controls=[
-                        section_heading("مستكشف الملفات", "ملفات ومجلدات المشروع الحالي"),
-                        ft.Container(
-                            content=ft.Text("WORKSPACE", size=9, color="#BFB7FF", weight=ft.FontWeight.BOLD),
-                            bgcolor="#29264B", padding=ft.Padding.symmetric(horizontal=8, vertical=5),
-                            border_radius=12,
-                        ),
-                    ],
-                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                ),
-                ft.Container(
-                    content=tree_view,
-                    max_height=240,
-                    bgcolor="#0A1320",
-                    border=ft.Border.all(1, "#26364D"),
-                    border_radius=12,
-                    padding=8,
-                ),
-                ft.Row(
-                    controls=[file_name_input, ft.Button(content="ملف جديد", on_click=create_file, bgcolor=ACCENT, color="white")],
-                    spacing=7,
-                ),
-                ft.Row(
-                    controls=[folder_name_input, ft.Button(content="مجلد جديد", on_click=create_folder)],
-                    spacing=7,
-                ),
-                ft.Row(
-                    controls=[rename_input, ft.Button(content="إعادة تسمية", on_click=rename_current_file)],
-                    spacing=7,
-                ),
+                explorer_panel,
+
             ],
             spacing=12,
         ),
