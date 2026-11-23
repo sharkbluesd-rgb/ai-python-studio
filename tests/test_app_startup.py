@@ -13,11 +13,13 @@ class FakePage:
         self.services = []
         self.controls = []
         self.update_count = 0
+        self.clean_count = 0
 
     def add(self, *controls):
         self.controls.extend(controls)
 
     def clean(self):
+        self.clean_count += 1
         self.controls.clear()
 
     def update(self):
@@ -33,7 +35,8 @@ class AppStartupSmokeTests(unittest.TestCase):
 
         self.assertEqual(page.title, "AI Python Studio")
         self.assertEqual(len(page.controls), 1)
-        self.assertGreater(page.update_count, 0)
+        self.assertGreaterEqual(page.update_count, 2)
+        self.assertEqual(page.clean_count, 1)
         self.assertTrue(page.services)
 
 

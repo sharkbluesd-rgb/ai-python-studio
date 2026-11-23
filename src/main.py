@@ -60,6 +60,33 @@ AUTOCOMPLETE_WORDS = [
 
 
 def _build_main(page: ft.Page) -> None:
+    # Show a real first frame before building the editor and the other screens.
+    page.title = "AI Python Studio"
+    page.theme_mode = ft.ThemeMode.DARK
+    page.bgcolor = APP_BG
+    page.padding = 0
+    page.spacing = 0
+    page.scroll = ft.ScrollMode.AUTO
+    page.add(
+        ft.Container(
+            expand=True,
+            bgcolor=APP_BG,
+            alignment=ft.Alignment.CENTER,
+            content=ft.Column(
+                controls=[
+                    ft.ProgressRing(width=38, height=38, color=ACCENT),
+                    ft.Text("AI Python Studio", size=21, weight=ft.FontWeight.BOLD, color=TEXT),
+                    ft.Text("جارٍ تجهيز المحرر ومساحة العمل...", size=13, color=MUTED),
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=18,
+            ),
+        )
+    )
+    page.update()
+    print("[AI Python Studio] Initial loading screen displayed.", flush=True)
+
     store = WorkspaceStore()
 
     page.title = "AI Python Studio"
@@ -1832,6 +1859,7 @@ def _build_main(page: ft.Page) -> None:
         bgcolor="#0B1320",
     )
 
+    page.clean()
     page.add(
         ft.SafeArea(
             content=ft.Column(
