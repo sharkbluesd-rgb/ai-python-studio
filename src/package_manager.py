@@ -38,7 +38,7 @@ def _validate_package(package: str, *, line_number: int | None = None) -> str:
         or not _PACKAGE.fullmatch(value)
     ):
         raise PackageManagerError(
-            f"صيغة اسم المكتبة غير مدعومة{location}: {value[:80]}"
+            f"صيغة اسم المكتبة غير مدعومة{location}."
         )
     return value
 
