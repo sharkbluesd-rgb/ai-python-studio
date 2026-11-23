@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: pages-preview-${{ github.sha }}
+  group: pages-preview
   cancel-in-progress: false
 
 permissions:
@@ -29,8 +29,6 @@ jobs:
   build:
     name: Build browser preview with bundled CodeEditor extension
     runs-on: ubuntu-latest
-    outputs:
-      pages_enabled: ${{ steps.configure_pages.outcome == 'success' }}
     permissions:
       contents: read
       pages: write
@@ -107,7 +105,8 @@ jobs:
           skill_modules = [name for name in names if "web_skill_catalog" in name.lower()]
           if not skill_modules:
               raise SystemExit("Web skill catalog was not bundled in the app archive.")
-          with app.open("web_skill_catalog.py") as source:
+          skill_module = next(name for name in names if name.endswith("web_skill_catalog.py"))
+          with app.open(skill_module) as source:
               catalog_source = source.read().decode("utf-8")
           if catalog_source.count("'name':") < 20 and catalog_source.count('"name":') < 20:
               raise SystemExit("The web skill catalog does not include all 20 skills.")

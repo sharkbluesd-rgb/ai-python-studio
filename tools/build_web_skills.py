@@ -31,10 +31,10 @@ def main() -> int:
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(
-        '"""Generated from src/agent_skills; do not edit by hand."""\\n'
+        '"""Generated from src/agent_skills; do not edit by hand."""' + chr(10)
         + "SKILL_CATALOG = "
         + pprint.pformat(catalog, width=100, sort_dicts=True)
-        + "\\n",
+        + chr(10),
         encoding="utf-8",
     )
     print(f"Generated {len(catalog)} skill references at {output}")
