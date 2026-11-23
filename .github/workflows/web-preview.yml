@@ -60,14 +60,14 @@ jobs:
           --verbose
           --base-url "/ai-python-studio/"
           --route-url-strategy hash
-          --output build/web
+          --output "${GITHUB_WORKSPACE}/build/web"
 
       - name: Verify web build output
         run: |
-          test -s build/web/index.html
-          test -d build/web
+          test -s "${GITHUB_WORKSPACE}/build/web/index.html"
+          test -d "${GITHUB_WORKSPACE}/build/web"
           echo "Web build output exists."
-          find build/web -maxdepth 2 -type f | head -40
+          find "${GITHUB_WORKSPACE}/build/web" -maxdepth 2 -type f | head -40
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
