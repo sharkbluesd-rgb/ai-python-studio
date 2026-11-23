@@ -597,8 +597,7 @@ def _build_main(page: ft.Page) -> None:
             save_current_file()
         except WorkspaceError as exc:
             output_text.value = str(exc)
-            output_text.color = DANGER            set_status("تعذر حفظ الملف قبل الاختبارات.", DANGER)
-            page.update()
+            output_text.color = DANGER            set_status("تعذر حفظ الملف قبل الاختبارات.", DANGER)            page.update()
             return
 
         disconnect_github_before_untrusted_code("تشغيل اختبارات المشروع")
@@ -1197,8 +1196,7 @@ def _build_main(page: ft.Page) -> None:
         try:
             token = await asyncio.to_thread(
                 GitHubClient.poll_device_authorization, github_state["client_id"], auth            )
-            if not token:
-                github_status.value = "لم تتم الموافقة بعد. أكمل الخطوات في GitHub ثم أعد المحاولة."
+            if not token:                github_status.value = "لم تتم الموافقة بعد. أكمل الخطوات في GitHub ثم أعد المحاولة."
                 github_status.color = ACCENT
             else:
                 client = GitHubClient(token)
@@ -1797,8 +1795,7 @@ def _build_main(page: ft.Page) -> None:
         try:
             items = skills_manager.search(query, limit=60)            skills_catalog.controls = []
             for item in items:
-                skills_catalog.controls.append(
-                    ft.Container(
+                skills_catalog.controls.append(                    ft.Container(
                         content=ft.Column(
                             controls=[
                                 ft.Row(
@@ -2109,8 +2106,9 @@ def _build_main(page: ft.Page) -> None:
             return
         active_screen["name"] = name
         screen_host.content = screens[name]
+        selected_tab = name if name in nav_buttons else "more"
         for key, button in nav_buttons.items():
-            selected = key == name
+            selected = key == selected_tab
             button.bgcolor = "#302D59" if selected else "#121C2A"
             button.color = "#E3DFFF" if selected else MUTED
         page.update()
