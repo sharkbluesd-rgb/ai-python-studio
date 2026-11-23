@@ -218,6 +218,37 @@ class SkillsManager:
         path = self.root / summary.relative_path
         return SkillDocument(summary=summary, content=self._safe_read(path))
 
+    def select_skills(self, query: str, *, max_skills: int = 3) -> list[SkillSummary]:
+        """Select relevant skills while avoiding redundant same-category context.
+
+        Relevance remains determined by the bilingual search score. When several
+        categories match, prefer coverage across categories; if fewer categories
+        match, fill remaining slots with the next most relevant skills.
+        """
+        if not isinstance(max_skills, int) or isinstance(max_skills, bool) or not 1 <= max_skills <= 10:
+            raise SkillsError("عدد المهارات المطلوب خارج النطاق.")
+        candidates = self.search(query, limit=MAX_SKILLS)
+        selected: list[SkillSummary] = []
+        selected_names: set[str] = set()
+        selected_categories: set[str] = set()
+
+        for skill in candidates:
+            if skill.category in selected_categories:
+                continue
+            selected.append(skill)
+            selected_names.add(skill.name)
+            selected_categories.add(skill.category)
+            if len(selected) >= max_skills:
+                return selected
+
+        for skill in candidates:
+            if skill.name in selected_names:
+                continue
+            selected.append(skill)
+            if len(selected) >= max_skills:
+                break
+        return selected
+
     def build_context(
         self,
         query: str,
@@ -230,7 +261,7 @@ class SkillsManager:
             raise SkillsError("عدد المهارات المطلوب خارج النطاق.")
         if not isinstance(max_chars, int) or isinstance(max_chars, bool) or not 1_000 <= max_chars <= 100_000:
             raise SkillsError("حد سياق المهارات خارج النطاق.")
-        selected = self.search(query, limit=max_skills)
+        selected = self.select_skills(query, max_skills=max_skills)
         if not selected:
             return ""
         header = (
