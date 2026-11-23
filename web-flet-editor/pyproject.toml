@@ -18,3 +18,6 @@ path = "src"
 [tool.flet.web]
 base_url = "/ai-python-studio/flet-editor/"
 route_url_strategy = "hash"
+renderer = "canvaskit"
+cdn = false
+wasm = false
