@@ -17,6 +17,9 @@ The following selected skill folders are redistributed under the MIT License sho
 - `ai-agent-engineering/ai-agent-architecture`
 - `ai-agent-engineering/prompt-engineering-concepts` (including its referenced cheatsheet)
 - `qa-testing/agent-evaluation` (including its referenced evaluation guides)
+- `security/security-and-hardening` (adapted for this project)
+- `devops/performance-optimization` (adapted for this project)
+- `flet/frontend-ui-engineering` (adapted for this project)
 
 Copyright and author notices are retained in each skill's license file. The repository's skills are available under their stated individual licences; verify a skill's own licence before importing any additional skill.
 
