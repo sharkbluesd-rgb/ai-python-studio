@@ -31,7 +31,7 @@ The application bundles a searchable set of specialist `SKILL.md` references for
 
 The Skills Manager parses skill metadata, searches Arabic/English keywords, loads full instructions on demand and can prepare a size-bounded context pack for an AI provider. Imported skills retain their individual licence files. The loader treats skills as untrusted reference text and never executes scripts from a skill directory.
 
-**Current limitation:** this release does not yet include a configured AI model/provider or chat assistant. The library and context-selection interface are installed and ready for integration; they do not independently change the underlying model or make the app autonomous. See `src/agent_skills/THIRD_PARTY_NOTICES.md` for attribution and licence information.
+**Optional AI assistant:** the app includes Gemini and OpenAI provider adapters. The user supplies their own API key; it remains in application memory, and each request requires fresh consent. The open file is sent only when the user enables the explicit code-sharing option. No provider key is bundled. Live provider calls still require an internet connection, a valid key, provider quota and a manual end-to-end check. See `src/agent_skills/THIRD_PARTY_NOTICES.md` for skill attribution and licence information.
 
 ## Development
 
@@ -48,6 +48,15 @@ To run the Flet application locally:
 ```bash
 flet run
 ```
+
+## Browser testing
+
+The feature branch publishes two browser previews:
+
+- [Responsive UI preview](https://sharkbluesd-rgb.github.io/ai-python-studio/)
+- [Flet CodeEditor browser test](https://sharkbluesd-rgb.github.io/ai-python-studio/flet-editor/)
+
+The second page packages the actual Flet CodeEditor extension and checks editing, two in-memory files, session-only save and Python syntax validation. It is an isolated compatibility test, not the full app from `src/main.py`. It does not execute code, install packages, access the phone filesystem, or provide GitHub OAuth. The full app's web support remains unverified.
 
 ## Android APK
 
