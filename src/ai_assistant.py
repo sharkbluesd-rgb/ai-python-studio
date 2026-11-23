@@ -50,6 +50,7 @@ def generate_reply(
     api_key: str,
     model: str,
     prompt: str,
+    system_instruction: str = "You are a helpful coding assistant.",
     timeout: int = 45,
 ) -> str:
     """Send a user-approved prompt to Gemini or OpenAI and return bounded text."""
@@ -74,7 +75,8 @@ def generate_reply(
         )
         data = _post_json(
             url,
-            {"contents": [{"parts": [{"text": prompt}]}],
+            {"systemInstruction": {"parts": [{"text": system_instruction}]},
+             "contents": [{"parts": [{"text": prompt}]}],
              "generationConfig": {"maxOutputTokens": 4096, "temperature": 0.2}},
             {"x-goog-api-key": api_key},
             timeout,
@@ -87,7 +89,8 @@ def generate_reply(
         url = "https://api.openai.com/v1/chat/completions"
         data = _post_json(
             url,
-            {"model": model, "messages": [{"role": "user", "content": prompt}],
+            {"model": model, "messages": [{"role": "system", "content": system_instruction},
+                                      {"role": "user", "content": prompt}],
              "max_tokens": 4096, "temperature": 0.2},
             {"Authorization": f"Bearer {api_key}"},
             timeout,
