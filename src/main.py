@@ -1855,7 +1855,7 @@ def main(page: ft.Page) -> None:
         _build_main(page)
     except Exception as exc:
         details = traceback.format_exc()
-        print("[AI Python Studio] Startup failure:\\n" + details, flush=True)
+        print("[AI Python Studio] Startup failure:\n" + details, flush=True)
         try:
             page.clean()
             page.title = "AI Python Studio - Startup Error"
