@@ -597,8 +597,10 @@ def _build_main(page: ft.Page) -> None:
             save_current_file()
         except WorkspaceError as exc:
             output_text.value = str(exc)
-            output_text.color = DANGER            set_status("تعذر حفظ الملف قبل الاختبارات.", DANGER)            page.update()            return
-
+            output_text.color = DANGER
+            set_status("تعذر حفظ الملف قبل الاختبارات.", DANGER)
+            page.update()
+            return
         disconnect_github_before_untrusted_code("تشغيل اختبارات المشروع")
         project_path = str(store._project_dir(active_project))
         run_state["running"] = True
@@ -1197,8 +1199,7 @@ def _build_main(page: ft.Page) -> None:
             token = await asyncio.to_thread(
                 GitHubClient.poll_device_authorization, github_state["client_id"], auth            )
             if not token:                github_status.value = "لم تتم الموافقة بعد. أكمل الخطوات في GitHub ثم أعد المحاولة."
-                github_status.color = ACCENT            else:
-                client = GitHubClient(token)
+                github_status.color = ACCENT            else:                client = GitHubClient(token)
                 user = await asyncio.to_thread(client.current_user)
                 old = github_state.get("client")
                 if old:
@@ -1797,7 +1798,6 @@ def _build_main(page: ft.Page) -> None:
         selectable=True,
     )
     skills_count = ft.Text("", size=11, color=SUCCESS)
-
     def show_skill_detail(skill_name: str) -> None:
         try:
             document = skills_manager.get_skill(skill_name)
