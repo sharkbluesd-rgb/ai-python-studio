@@ -1046,12 +1046,14 @@ def _build_main(page: ft.Page) -> None:
         border_radius=13,
         padding=3,
         rtl=False,
-        height=max(300, min(620, (page.height or 800) * 0.56)),
+        height=max(300, min(620, (getattr(page, "height", None) or 800) * 0.56)),
     )
 
     def update_editor_viewport(e=None) -> None:
-        available_height = page.height or 800
-        keyboard_inset = getattr(page.media.view_insets, "bottom", 0) if page.media else 0
+        available_height = getattr(page, "height", None) or 800
+        media = getattr(page, "media", None)
+        view_insets = getattr(media, "view_insets", None)
+        keyboard_inset = getattr(view_insets, "bottom", 0) if view_insets else 0
         editor_frame.height = max(
             280,
             min(620, (available_height - min(keyboard_inset, available_height * 0.45)) * 0.56),
