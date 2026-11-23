@@ -2176,7 +2176,7 @@ def _build_main(page: ft.Page) -> None:
             spacing=12, scroll=ft.ScrollMode.AUTO, expand=True,
         ),
         "editor": ft.Column(
-            controls=[toolbar, editor_panel, output_panel],
+            controls=[toolbar, output_panel, editor_panel],
             spacing=10, scroll=ft.ScrollMode.AUTO, expand=True,
         ),
         "tools": ft.Column(
