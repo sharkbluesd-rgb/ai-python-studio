@@ -18,7 +18,10 @@ from file_tree import build_tree_entries
 from project_tools import analyze_project as inspect_project, format_analysis_report
 from workspace import MAX_ARCHIVE_BYTES, WorkspaceError, WorkspaceStore
 from package_manager import PackageManagerError, parse_requirements, install_packages, list_installed
-from github_cloud import (\n    GitHubClient, GitHubError, select_dispatched_run,\n    validate_branch, validate_repository,\n)
+from github_cloud import (
+    GitHubClient, GitHubError, select_dispatched_run,
+    validate_branch, validate_repository,
+)
 from skills_manager import SkillsManager, SkillsError
 from ai_assistant import AIProviderError, generate_reply
 
