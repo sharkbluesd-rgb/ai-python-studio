@@ -31,12 +31,12 @@ CATALOG = [
 
 class WebPreviewValidationTests(unittest.TestCase):
     def test_valid_python_source(self):
-        valid, message = validate_python_source("print('hello')\\n")
+        valid, message = validate_python_source("print('hello')\n")
         self.assertTrue(valid)
         self.assertIn("سليم", message)
 
     def test_invalid_python_source_reports_location(self):
-        valid, message = validate_python_source("def broken(:\\n    pass\\n")
+        valid, message = validate_python_source("def broken(:\n    pass\n")
         self.assertFalse(valid)
         self.assertIn("السطر 1", message)
 
