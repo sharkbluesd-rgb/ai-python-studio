@@ -9,7 +9,7 @@ from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright
 
 
-URL = os.environ.get("FLET_EDITOR_URL", "http://127.0.0.1:8765/")
+URL = os.environ.get(\n    "FLET_EDITOR_URL",\n    "http://127.0.0.1:8765/ai-python-studio/flet-editor/",\n)
 STARTUP_TIMEOUT_MS = 180_000
 
 
@@ -49,7 +49,7 @@ def main() -> int:
             raise SystemExit(
                 "Flet app reported a startup error:\n"
                 + json.dumps(
-                    {"title": title, "details": details, "page_errors": page_errors},
+                    {\n                        "title": title,\n                        "details": details,\n                        "page_errors": page_errors,\n                        "console_errors": console_errors[-30:],\n                        "failed_requests": failed_requests[-30:],\n                    },
                     ensure_ascii=False,
                 )
             )
