@@ -30,7 +30,10 @@ class SkillsManagerTests(unittest.TestCase):
         self.assertIn("flet-mobile-development", names)
         self.assertIn("test-driven-development", names)
         self.assertIn("code-review", names)
-        self.assertGreaterEqual(len(names), 12)
+        self.assertGreaterEqual(len(names), 17)
+        self.assertIn("flet-web-runtime-debugging", names)
+        self.assertIn("github-pages-deployment", names)
+        self.assertIn("android-python-packaging", names)
 
     def test_flet_search_prioritises_flet_skill(self):
         matches = self.manager.search("Flet Android APK web editor", limit=5)
@@ -41,6 +44,16 @@ class SkillsManagerTests(unittest.TestCase):
         matches = self.manager.search("تصحيح أخطاء بايثون", limit=5)
         self.assertTrue(matches)
         self.assertEqual(matches[0].name, "python-debugging")
+
+    def test_arabic_web_debugging_search_finds_flet_runtime_skill(self):
+        matches = self.manager.search("شاشة سوداء شعار تحميل Flet ويب", limit=5)
+        self.assertTrue(matches)
+        self.assertEqual(matches[0].name, "flet-web-runtime-debugging")
+
+    def test_pages_search_finds_deployment_skill(self):
+        matches = self.manager.search("GitHub Pages 404 نشر الموقع", limit=5)
+        self.assertTrue(matches)
+        self.assertEqual(matches[0].name, "github-pages-deployment")
 
     def test_load_skill_returns_full_content(self):
         document = self.manager.get_skill("repo-recon")

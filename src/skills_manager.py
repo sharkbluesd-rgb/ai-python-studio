@@ -28,6 +28,11 @@ SKILL_LABELS_AR = {
     "flet-mobile-development": "تطوير تطبيقات Flet وAndroid",
     "python-debugging": "تشخيص أخطاء Python",
     "android-release-verification": "التحقق من إصدارات APK",
+    "flet-web-runtime-debugging": "تشخيص تشغيل Flet على الويب",
+    "github-pages-deployment": "نشر GitHub Pages والتحقق من المسارات",
+    "mobile-browser-debugging": "تصحيح المتصفح على الهاتف",
+    "android-python-packaging": "توافق مكتبات Python مع Android",
+    "flet-mobile-ux-accessibility": "تصميم واجهات Flet للهاتف وإمكانية الوصول",
 }
 
 SKILL_ARABIC_TERMS = {
@@ -43,6 +48,11 @@ SKILL_ARABIC_TERMS = {
     "flet-mobile-development": "فليت تطبيق أندرويد هاتف واجهة محرر أكواد ويب APK",
     "python-debugging": "تصحيح أخطاء بايثون تتبع الاستثناءات traceback مشاكل",
     "android-release-verification": "بناء apk أندرويد إصدار تطبيق اختبار تثبيت",
+    "flet-web-runtime-debugging": "شاشة سوداء شعار تحميل Flet ويب متصفح تشغيل startup websocket assets javascript",
+    "github-pages-deployment": "GitHub Pages نشر موقع static artifact base path 404 actions environment permissions",
+    "mobile-browser-debugging": "متصفح الهاتف console devtools javascript network cache responsive viewport webview",
+    "android-python-packaging": "Android APK Python dependencies wheels ABI arm64 binary packages Flet build",
+    "flet-mobile-ux-accessibility": "Flet واجهة هاتف responsive touch RTL accessibility mobile layout keyboard",
 }
 
 
