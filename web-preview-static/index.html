@@ -3,6 +3,31 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0a1020"><title>AI Python Studio — Web Preview</title>
+<script>
+/* Remove the old Flutter/Flet service worker and its stale cache after switching
+   this project URL to the lightweight static browser preview. */
+(async () => {
+  if (!("serviceWorker" in navigator)) return;
+  try {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    const stale = registrations.filter((registration) =>
+      new URL(registration.scope).pathname.startsWith("/ai-python-studio/")
+    );
+    if (!stale.length) return;
+    await Promise.all(stale.map((registration) => registration.unregister()));
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.filter((key) => /flutter|flet/i.test(key)).map((key) => caches.delete(key)));
+    }
+    if (navigator.serviceWorker.controller && !sessionStorage.getItem("studio-static-preview-cleaned")) {
+      sessionStorage.setItem("studio-static-preview-cleaned", "1");
+      location.reload();
+    }
+  } catch (error) {
+    console.warn("Preview cache cleanup could not finish.", error);
+  }
+})();
+</script>
 <link rel="stylesheet" href="./style.css">
 </head>
 <body>
