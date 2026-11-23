@@ -208,7 +208,7 @@ def main(page: ft.Page) -> None:
         status.value = message
         status.color = color
 
-    def on_editor_change(e: ft.Event[fce.CodeEditor]) -> None:
+    def on_editor_change(e: ft.Event[ft.TextField]) -> None:
         source_files[active_file["name"]] = editor.value or ""
         set_status("هناك تغييرات في الملف الحالي.", "#E4C27A")
         page.update()
@@ -235,7 +235,6 @@ def main(page: ft.Page) -> None:
         source_files[active_file["name"]] = editor.value or ""
         active_file["name"] = name
         editor.value = source_files[name]
-        editor.language = fce.CodeLanguage.PYTHON
         current_file.value = name
         for file_name, button in file_button_refs.items():
             button.bgcolor = ACCENT if file_name == name else "#202A3A"
