@@ -1,148 +1,346 @@
-name: Build and deploy AI Python Studio Web Preview
+"""Browser-only preview for verifying the Flet web client and CodeEditor extension.
 
-on:
-  push:
-    branches:
-      - feature/studio-2.0
-    paths:
-      - "src/web_preview.py"
-      - "tests/test_web_preview.py"
-      - "pyproject.toml"
-      - ".github/workflows/web-preview.yml"
-  workflow_dispatch:
+This intentionally avoids the Android runner, filesystem, package installer and
+GitHub integration. Those features require the full native/dynamic application.
+"""
 
-concurrency:
-  group: pages-preview-${{ github.sha }}
-  cancel-in-progress: false
+from __future__ import annotations
 
-permissions:
-  contents: read
+import ast
 
-env:
-  FLET_CLI_NO_RICH_OUTPUT: "1"
-  PYTHONUNBUFFERED: "1"
+import flet as ft
+import flet_code_editor as fce
 
-jobs:
-  build:
-    name: Build browser preview with bundled CodeEditor extension
-    runs-on: ubuntu-latest
-    outputs:
-      pages_enabled: ${{ steps.configure_pages.outcome == 'success' }}
-    permissions:
-      contents: read
-      pages: write
-    steps:
-      - name: Check out feature branch
-        uses: actions/checkout@v7
 
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-          cache: pip
+BG = "#080D16"
+PANEL = "#121B2A"
+EDITOR_BG = "#0A111D"
+ACCENT = "#8175F5"
+TEXT = "#F2F4FC"
+MUTED = "#9AA8BC"
+SUCCESS = "#83DDB8"
+DANGER = "#FF8F9B"
 
-      - name: Install Flet and project dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e .
-          python -m pip install "flet-cli==1.1.2"
+STARTER_FILES = {
+    "main.py": '''"""AI Python Studio — browser editor preview."""
 
-      - name: Compile Python source
-        run: python -m compileall -q src tests
 
-      - name: Run browser preview tests
-        env:
-          PYTHONPATH: src
-        run: python -m unittest discover -s tests -p "test_web_preview.py" -v
+def greet(name: str) -> str:
+    return f"Hello, {name}!"
 
-      - name: Prepare isolated Flet app with CodeEditor dependency
-        run: |
-          mkdir -p web-preview
-          cp src/web_preview.py web-preview/main.py
-          cat > web-preview/pyproject.toml <<'EOF'
-          [project]
-          name = "ai-python-studio-web-preview"
-          version = "1.2.0"
-          requires-python = ">=3.10"
-          dependencies = [
-              "flet==1.1.2",
-              "flet-code-editor==1.1.2",
-          ]
 
-          [tool.flet]
-          product = "AI Python Studio Web Preview"
-          EOF
+if __name__ == "__main__":
+    print(greet("Python developer"))
+''',
+    "utils.py": '''"""Small helper functions for the preview project."""
 
-      - name: Build static web app with custom Flutter extensions
-        run: >-
-          flet build web web-preview
-          --yes
-          --verbose
-          --base-url "/ai-python-studio/"
-          --route-url-strategy hash
-          --no-cdn
-          --output "${GITHUB_WORKSPACE}/build/web"
 
-      - name: Verify web build and bundled CodeEditor dependency
-        run: |
-          test -s "${GITHUB_WORKSPACE}/build/web/index.html"
-          test -d "${GITHUB_WORKSPACE}/build/web"
-          python - <<'PY'
-          from pathlib import Path
-          import zipfile
+def square(number: int) -> int:
+    """Return the square of a number."""
+    return number * number
 
-          archive = Path("build/web/assets/app/app.zip")
-          if not archive.is_file():
-              raise SystemExit("Flet app archive is missing.")
-          with zipfile.ZipFile(archive) as app:
-              names = app.namelist()
-          matches = [name for name in names if "flet_code_editor" in name.lower()]
-          if not matches:
-              raise SystemExit("flet-code-editor was not bundled in the web app.")
-          print(f"Bundled flet-code-editor entries: {len(matches)}")
-          PY
-          echo "Web build output and CodeEditor Python package verified."
-          find "${GITHUB_WORKSPACE}/build/web" -maxdepth 2 -type f | head -40
 
-      - name: Upload standalone browser preview
-        uses: actions/upload-artifact@v7
-        with:
-          name: ai-python-studio-web-preview
-          path: ${{ github.workspace }}/build/web
-          if-no-files-found: error
-          retention-days: 14
+def is_even(number: int) -> bool:
+    return number % 2 == 0
+''',
+}
 
-      - name: Upload Pages deployment artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: ${{ github.workspace }}/build/web
-          name: github-pages
+AUTOCOMPLETE_WORDS = [
+    "print", "input", "len", "range", "enumerate", "zip", "sum", "min",
+    "max", "sorted", "list", "dict", "str", "int", "float", "bool",
+    "class", "def", "return", "async", "await", "import", "from", "as",
+    "if", "elif", "else", "for", "while", "try", "except", "finally",
+    "with", "lambda", "yield", "self", "True", "False", "None",
+]
 
-      - name: Summarize browser preview
-        if: always()
-        run: |
-          {
-            echo "## AI Python Studio — Browser Preview"
-            echo "- Static web build: passed."
-            echo "- GitHub Pages deployment artifact uploaded."
-            echo "- [Open workflow artifacts](https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts)."
-          } >> "$GITHUB_STEP_SUMMARY"
 
-  deploy:
-    name: Publish browser preview
-    if: github.ref == 'refs/heads/feature/studio-2.0'
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-      contents: read
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy preview to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5
-        with:
-          artifact_name: github-pages
+def validate_python_source(source: str) -> tuple[bool, str]:
+    """Validate Python syntax without executing user code."""
+    if not isinstance(source, str):
+        return False, "محتوى الكود غير صالح."
+    try:
+        ast.parse(source, filename="main.py")
+    except SyntaxError as exc:
+        line = exc.lineno or "?"
+        column = exc.offset or "?"
+        return False, f"خطأ نحوي في السطر {line}، العمود {column}: {exc.msg}"
+    return True, "الكود سليم نحوياً. لم يتم تشغيله."
+
+
+def main(page: ft.Page) -> None:
+    page.title = "AI Python Studio — Web Preview"
+    page.theme_mode = ft.ThemeMode.DARK
+    page.bgcolor = BG
+    page.padding = 0
+    page.spacing = 0
+
+    active_file = {"name": "main.py"}
+    source_files = dict(STARTER_FILES)
+
+    current_file = ft.Text(
+        "main.py", size=12, color="#C7BFFF", weight=ft.FontWeight.BOLD
+    )
+    status = ft.Text("جاهز — هذه نسخة معاينة للويب.", size=12, color=SUCCESS)
+    output = ft.Text(
+        "ستظهر هنا نتيجة فحص الصياغة.", size=12, color=MUTED, selectable=True
+    )
+    file_buttons = ft.Row(wrap=True, spacing=6)
+    file_button_refs = {}
+
+    editor = fce.CodeEditor(
+        value=source_files["main.py"],
+        language=fce.CodeLanguage.PYTHON,
+        code_theme=fce.CodeTheme.ATOM_ONE_DARK,
+        autocomplete=True,
+        autocomplete_words=AUTOCOMPLETE_WORDS,
+        gutter_style=fce.GutterStyle(
+            show_line_numbers=True,
+            show_folding_handles=True,
+            show_errors=True,
+            width=48,
+        ),
+        text_style=ft.TextStyle(size=14, font_family="monospace"),
+        padding=12,
+        autofocus=False,
+        expand=True,
+    )
+
+    def set_status(message: str, color: str = MUTED) -> None:
+        status.value = message
+        status.color = color
+
+    def on_editor_change(e: ft.Event[fce.CodeEditor]) -> None:
+        if e.data is not None:
+            editor.value = e.data
+        source_files[active_file["name"]] = editor.value or ""
+        set_status("هناك تغييرات في الملف الحالي.", "#E4C27A")
+        page.update()
+
+    editor.on_change = on_editor_change
+
+    def check_syntax(e: ft.Event[ft.Button]) -> None:
+        valid, message = validate_python_source(editor.value or "")
+        output.value = message
+        output.color = SUCCESS if valid else DANGER
+        set_status(
+            "اكتمل فحص الصياغة." if valid else "تم العثور على خطأ نحوي.",
+            SUCCESS if valid else DANGER,
+        )
+        page.update()
+
+    def reset_file(e: ft.Event[ft.Button]) -> None:
+        name = active_file["name"]
+        editor.value = STARTER_FILES[name]
+        source_files[name] = editor.value
+        output.value = "تمت استعادة المثال الأصلي."
+        output.color = MUTED
+        set_status("تمت استعادة محتوى الملف.", SUCCESS)
+        page.update()
+
+    def select_file(name: str) -> None:
+        source_files[active_file["name"]] = editor.value or ""
+        active_file["name"] = name
+        editor.value = source_files[name]
+        editor.language = fce.CodeLanguage.PYTHON
+        current_file.value = name
+        for file_name, button in file_button_refs.items():
+            button.bgcolor = ACCENT if file_name == name else "#202A3A"
+        set_status(f"تم فتح {name}.", SUCCESS)
+        page.update()
+
+    # Keep stable references so file selection can update the active state.
+    for name in STARTER_FILES:
+        button = ft.Button(
+            content=name,
+            bgcolor=ACCENT if name == "main.py" else "#202A3A",
+            color="white",
+            on_click=lambda e, selected=name: select_file(selected),
+        )
+        file_buttons.controls.append(button)
+        file_button_refs[name] = button
+
+    header = ft.Container(
+        content=ft.Row(
+            controls=[
+                ft.Container(
+                    content=ft.Text(
+                        "Py", size=25, weight=ft.FontWeight.BOLD, color="white"
+                    ),
+                    width=58,
+                    height=58,
+                    alignment=ft.Alignment.CENTER,
+                    bgcolor=ACCENT,
+                    border_radius=16,
+                ),
+                ft.Column(
+                    controls=[
+                        ft.Text(
+                            "AI Python Studio",
+                            size=19,
+                            weight=ft.FontWeight.BOLD,
+                            color=TEXT,
+                        ),
+                        ft.Text(
+                            "معاينة محرر Python عبر المتصفح",
+                            size=11,
+                            color=MUTED,
+                        ),
+                    ],
+                    spacing=3,
+                    expand=True,
+                ),
+                ft.Container(
+                    content=ft.Text("WEB", size=11, color="#D8D3FF"),
+                    padding=ft.Padding.symmetric(horizontal=11, vertical=8),
+                    bgcolor="#242143",
+                    border_radius=20,
+                ),
+            ],
+            spacing=12,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
+        bgcolor="#0E1725",
+        padding=14,
+        border=ft.Border.only(bottom=ft.BorderSide(1, "#26354C")),
+    )
+
+    notice = ft.Container(
+        content=ft.Row(
+            controls=[
+                ft.Icon(ft.Icons.INFO_OUTLINE, color="#E4C27A", size=18),
+                ft.Text(
+                    "نسخة اختبار: تعرض محرر الأكواد والإضافات في الويب. "
+                    "لا تتصل بملفات الهاتف أو مدير الحزم أو GitHub.",
+                    color="#E4D5AE",
+                    size=11,
+                    expand=True,
+                ),
+            ],
+            spacing=9,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
+        bgcolor="#292315",
+        border=ft.Border.all(1, "#57472A"),
+        border_radius=12,
+        padding=11,
+    )
+
+    editor_card = ft.Container(
+        content=ft.Column(
+            controls=[
+                ft.Row(
+                    controls=[
+                        ft.Column(
+                            controls=[
+                                ft.Text(
+                                    "محرر الأكواد",
+                                    size=15,
+                                    weight=ft.FontWeight.BOLD,
+                                    color=TEXT,
+                                ),
+                                current_file,
+                            ],
+                            spacing=3,
+                            expand=True,
+                        ),
+                        ft.Text("Python", size=11, color=MUTED),
+                    ],
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                file_buttons,
+                ft.Container(
+                    content=editor,
+                    bgcolor=EDITOR_BG,
+                    border=ft.Border.all(1, "#26354C"),
+                    border_radius=12,
+                    padding=4,
+                    height=420,
+                ),
+                ft.Row(
+                    controls=[
+                        ft.Button(
+                            content="فحص الكود",
+                            icon=ft.Icons.CHECK_CIRCLE_OUTLINE,
+                            bgcolor="#237A55",
+                            color="white",
+                            on_click=check_syntax,
+                            expand=True,
+                        ),
+                        ft.Button(
+                            content="استعادة المثال",
+                            icon=ft.Icons.RESTART_ALT,
+                            bgcolor="#303B50",
+                            color="white",
+                            on_click=reset_file,
+                            expand=True,
+                        ),
+                    ],
+                    spacing=8,
+                ),
+            ],
+            spacing=12,
+        ),
+        bgcolor=PANEL,
+        border=ft.Border.all(1, "#26354C"),
+        border_radius=14,
+        padding=13,
+    )
+
+    output_card = ft.Container(
+        content=ft.Column(
+            controls=[
+                ft.Text("نتيجة الفحص", size=14, weight=ft.FontWeight.BOLD, color=TEXT),
+                output,
+                ft.Divider(color="#26354C", height=1),
+                status,
+            ],
+            spacing=8,
+        ),
+        bgcolor="#0D1522",
+        border=ft.Border.all(1, "#26354C"),
+        border_radius=12,
+        padding=13,
+    )
+
+    content = ft.Column(
+        controls=[
+            notice,
+            ft.Row(
+                controls=[
+                    ft.Text("المشروع التجريبي", size=13, color=TEXT, weight=ft.FontWeight.BOLD),
+                    ft.Text("My First Project", size=11, color=MUTED),
+                ],
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            ),
+            editor_card,
+            output_card,
+            ft.Text(
+                "الاختبار يركز على عرض عنصر CodeEditor في متصفح الهاتف "
+                "قبل دمج عميل الويب المبني مع التطبيق الكامل.",
+                size=10,
+                color=MUTED,
+                text_align=ft.TextAlign.CENTER,
+            ),
+        ],
+        spacing=13,
+        scroll=ft.ScrollMode.AUTO,
+        expand=True,
+    )
+
+    page.add(
+        ft.SafeArea(
+            content=ft.Column(
+                controls=[
+                    header,
+                    ft.Container(content=content, expand=True, padding=12),
+                ],
+                spacing=0,
+                expand=True,
+            ),
+            expand=True,
+        )
+    )
+
+
+if __name__ == "__main__":
+    ft.run(main)
