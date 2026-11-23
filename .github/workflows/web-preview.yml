@@ -55,7 +55,7 @@ jobs:
 
       - name: Build static web app with custom Flutter extensions
         run: >-
-          flet build web src/web_preview.py
+          flet build web src --module-name web_preview
           --yes
           --verbose
           --base-url "/ai-python-studio/"
