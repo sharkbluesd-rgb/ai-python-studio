@@ -80,7 +80,7 @@ jobs:
           flet_root = root / 'flet-editor'
           assert (flet_root / 'index.html').is_file(), 'Flet CodeEditor build is missing index.html'
           assert any(p.suffix == '.js' for p in flet_root.rglob('*') if p.is_file()), 'Flet JavaScript runtime assets are missing'
-          assert any(p.name == 'pyodide.js' or p.name == 'pyodide.asm.js' for p in flet_root.rglob('*') if p.is_file()), 'Local Pyodide runtime is missing'
+          assert any(p.name in {'pyodide.mjs', 'pyodide.js'} for p in flet_root.rglob('*') if p.is_file()), 'Local Pyodide runtime is missing'
           assert any('canvaskit' in p.parts for p in flet_root.rglob('*') if p.is_file()), 'Local CanvasKit assets are missing'
           assert not any(p.suffix in {'.wasm', '.mjs'} for p in root.iterdir() if p.is_file())
           print(f'Verified static UI ({len(skills)} skills) and isolated Flet CodeEditor web build.')
