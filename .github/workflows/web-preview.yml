@@ -44,7 +44,7 @@ jobs:
           python -m pip install -e .
           python -m pip install flet-cli==1.1.2
       - name: Compile Python source
-        run: python -m compileall -q src tests tools
+        run: python -m compileall -q src tests tools web-flet-editor/src
       - name: Run browser preview and startup tests
         env:
           PYTHONPATH: src
