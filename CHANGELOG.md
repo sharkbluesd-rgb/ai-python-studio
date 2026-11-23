@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased — Part 2 hardening
+
+### Improved
+- Bounded and validated package requirements input before invoking pip.
+- Limited package installation requests to 100 package specs and 64 KB requirements files.
+- Clamped package installation timeouts and normalized pip startup failures.
+- Added regression tests for package option/URL injection, oversized requirements, excessive package counts and timeout handling.
+- Applied the shared strict GitHub owner/repository and branch validators in the editor's upload/build flow.
+- Corrected web-preview documentation to distinguish the published static browser mock from the full Flet application.
+
+### Validation status
+- The GitHub Actions run for the current feature branch passed Python compilation, unit tests, Ruff, Bandit and pip-audit before entering the APK build step.
+- APK build and upload are still pending final workflow completion.
+- Full Flet web compatibility and physical Android interaction remain unverified.
+
 ## 1.2.0 — 2026-11-22
 
 ### Added
