@@ -112,21 +112,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Configure GitHub Pages
-        id: configure_pages
-        continue-on-error: true
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
-
-      - name: Explain Pages setup requirement
-        if: steps.configure_pages.outcome != 'success'
-        run: |
-          echo "::warning::The web preview artifact was uploaded, but Pages is not enabled by this GitHub connection."
-          echo "Repository owner: enable Settings > Pages > Build and deployment > Source: GitHub Actions, then rerun this workflow."
-
       - name: Upload Pages deployment artifact
-        if: steps.configure_pages.outcome == 'success'
         uses: actions/upload-pages-artifact@v4
         with:
           path: ${{ github.workspace }}/build/web
@@ -134,26 +120,17 @@ jobs:
 
       - name: Summarize browser preview
         if: always()
-        env:
-          PAGES_CONFIGURE_OUTCOME: ${{ steps.configure_pages.outcome }}
         run: |
           {
             echo "## AI Python Studio — Browser Preview"
             echo "- Static web build: passed."
-            echo "- Test-only preview artifact: ai-python-studio-web-preview."
+            echo "- GitHub Pages deployment artifact uploaded."
             echo "- [Open workflow artifacts](https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts)."
-            if [ "$PAGES_CONFIGURE_OUTCOME" = "success" ]; then
-              echo "- GitHub Pages is configured; the deployment job will publish this preview."
-            else
-              echo "- GitHub Pages could not be enabled by the connected GitHub integration."
-              echo "- A repository administrator must open Settings > Pages, select GitHub Actions as the source, then rerun this workflow."
-              echo "- The ZIP artifact is still available to download and test locally."
-            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
   deploy:
     name: Publish browser preview
-    if: github.ref == 'refs/heads/feature/studio-2.0' && needs.build.outputs.pages_enabled == 'true'
+    if: github.ref == 'refs/heads/feature/studio-2.0'
     needs: build
     runs-on: ubuntu-latest
     permissions:
