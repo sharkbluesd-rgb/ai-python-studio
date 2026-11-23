@@ -193,17 +193,29 @@ def _build_main(page: ft.Page) -> None:
         text_size=12, dense=True, expand=True,
     )
     package_state = {"busy": False}
-    run_button = ft.Button(content="تشغيل", bgcolor="#237A55", color="white")
+    run_button = ft.Button(
+        content="▶ تشغيل",
+        bgcolor="#176B50",
+        color="#F0FFF8",
+        style=_button_style(radius=11, horizontal=16, vertical=9, border_color="#2C9876"),
+    )
     test_button = ft.Button(content="اختبارات المشروع", bgcolor="#34466B", color="white")
     stop_button = ft.Button(
-        content="إيقاف", bgcolor="#8B3038",
-        color="white", disabled=True,
+        content="إيقاف",
+        bgcolor="#402532",
+        color="#FFDCE2",
+        disabled=True,
+        style=_button_style(radius=11, horizontal=13, vertical=9, border_color="#70404D"),
     )
     run_state = {"running": False, "control": None}
     autosave_state = {"revision": 0}
     output_state = {"expanded": False}
     output_toggle_button = ft.Button(
-        content="المخرجات", on_click=lambda e: toggle_output_panel()
+        content="المخرجات",
+        on_click=lambda e: toggle_output_panel(),
+        bgcolor="#18243A",
+        color="#D5DDF0",
+        style=_button_style(radius=10, horizontal=11, vertical=7),
     )
     file_picker = ft.FilePicker()
     page.services.append(file_picker)
@@ -274,8 +286,9 @@ def _build_main(page: ft.Page) -> None:
                 ft.Button(
                     content=project["name"],
                     on_click=lambda e, selected=project_id: open_project(selected),
-                    bgcolor=ACCENT if is_active else "#202A3A",
-                    color="white",
+                    bgcolor="#302A59" if is_active else "#172335",
+                    color="#F0EDFF" if is_active else "#DCE5F2",
+                    style=_button_style(radius=10, horizontal=13, vertical=8),
                 )
             )
 
@@ -284,22 +297,40 @@ def _build_main(page: ft.Page) -> None:
         for name in tabs.files:
             is_active = name == active_file
             tab_buttons.controls.append(
-                ft.Row(
-                    controls=[
-                        ft.Button(
-                            content=(f"● {name}" if name in dirty_files else name),
-                            on_click=lambda e, selected=name: open_file(selected),
-                            bgcolor=ACCENT if is_active else "#202A3A",
-                            color="white",
-                        ),
-                        ft.Button(
-                            content="×",
-                            on_click=lambda e, selected=name: close_tab(selected),
-                            bgcolor="#3A2630",
-                            color="white",
-                        ),
-                    ],
-                    spacing=2,
+                ft.Container(
+                    content=ft.Row(
+                        controls=[
+                            ft.Button(
+                                content=(f"● {name}" if name in dirty_files else name),
+                                on_click=lambda e, selected=name: open_file(selected),
+                                bgcolor="#302A59" if is_active else "#172335",
+                                color="#F0EDFF" if is_active else "#C2CCDA",
+                                style=_button_style(
+                                    radius=8,
+                                    horizontal=10,
+                                    vertical=7,
+                                    border_color="#574E91" if is_active else "#26364D",
+                                ),
+                            ),
+                            ft.Button(
+                                content="×",
+                                on_click=lambda e, selected=name: close_tab(selected),
+                                bgcolor="#211D2D" if is_active else "#172335",
+                                color="#D9B8C0" if is_active else MUTED,
+                                style=_button_style(
+                                    radius=8,
+                                    horizontal=8,
+                                    vertical=7,
+                                    border_color="#453040" if is_active else "#26364D",
+                                ),
+                            ),
+                        ],
+                        spacing=3,
+                    ),
+                    bgcolor="#171E32" if is_active else "#101A29",
+                    border=ft.Border.all(1, "#4B4381" if is_active else "#26364D"),
+                    border_radius=10,
+                    padding=ft.Padding.symmetric(horizontal=3, vertical=3),
                 )
             )
 
@@ -330,8 +361,9 @@ def _build_main(page: ft.Page) -> None:
                     ft.Button(
                         content=f"{indent}{symbol} {PurePosixPath(path).name}",
                         on_click=lambda e, selected=path: toggle_tree_folder(selected),
-                        bgcolor="#202A3A",
-                        color="white",
+                        bgcolor="#19263A",
+                        color="#DCE5F2",
+                        style=_button_style(radius=9, horizontal=11, vertical=7),
                     )
                 )
             else:
@@ -340,8 +372,9 @@ def _build_main(page: ft.Page) -> None:
                     ft.Button(
                         content=f"{indent}📄 {PurePosixPath(path).name}",
                         on_click=lambda e, selected=path: open_file(selected),
-                        bgcolor=ACCENT if is_active else "#172131",
-                        color="white",
+                        bgcolor="#302A59" if is_active else "#111D2D",
+                        color="#F0EDFF" if is_active else "#DCE5F2",
+                        style=_button_style(radius=9, horizontal=11, vertical=7),
                     )
                 )
 
@@ -1093,9 +1126,9 @@ def _build_main(page: ft.Page) -> None:
     editor_frame = ft.Container(
         content=editor,
         bgcolor=EDITOR_BG,
-        border=ft.Border.all(1, "#2A3B55"),
-        border_radius=13,
-        padding=3,
+        border=ft.Border.all(1, "#34465F"),
+        border_radius=12,
+        padding=2,
         rtl=False,
         height=max(180, min(760, (getattr(page, "height", None) or 800) - 320)),
     )
@@ -1143,37 +1176,43 @@ def _build_main(page: ft.Page) -> None:
         content=ft.Row(
             controls=[
                 ft.Container(
-                    content=ft.Text("Py", size=19, weight=ft.FontWeight.BOLD, color="white"),
-                    width=42, height=42, alignment=ft.Alignment.CENTER,
-                    bgcolor=ACCENT, border_radius=13,
+                    content=ft.Text("PY", size=15, weight=ft.FontWeight.BOLD, color="#F7F5FF"),
+                    width=40,
+                    height=40,
+                    alignment=ft.Alignment.CENTER,
+                    bgcolor="#29264B",
+                    border=ft.Border.all(1, "#51498A"),
+                    border_radius=13,
                 ),
                 ft.Column(
                     controls=[
-                        ft.Text("AI Python Studio", size=16, weight=ft.FontWeight.BOLD, color=TEXT),
-                        ft.Text("بيئة تطوير Python", size=10, color=MUTED),
+                        ft.Text("AI Python Studio", size=15, weight=ft.FontWeight.BOLD, color=TEXT),
+                        ft.Text("محرر Python للمشاريع", size=10, color=MUTED),
                         project_summary,
                     ],
-                    spacing=2, expand=True,
+                    spacing=2,
+                    expand=True,
                 ),
                 ft.Container(
                     content=ft.Row(
                         controls=[
-                            ft.Container(width=6, height=6, bgcolor=SUCCESS, border_radius=8),
-                            ft.Text("جاهز", size=10, color=SUCCESS, weight=ft.FontWeight.BOLD),
+                            ft.Container(width=6, height=6, bgcolor=ACCENT, border_radius=8),
+                            ft.Text("WORKSPACE", size=9, color="#D8D1FF", weight=ft.FontWeight.BOLD),
                         ],
-                        spacing=5,
+                        spacing=6,
                     ),
-                    padding=ft.Padding.symmetric(horizontal=10, vertical=8),
-                    bgcolor="#142A29", border=ft.Border.all(1, "#285044"),
+                    padding=ft.Padding.symmetric(horizontal=10, vertical=9),
+                    bgcolor="#171D31",
+                    border=ft.Border.all(1, "#38365D"),
                     border_radius=18,
                 ),
             ],
             spacing=10,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         ),
-        padding=ft.Padding.only(left=14, right=14, top=9, bottom=9),
-        bgcolor="#0C1420",
-        border=ft.Border.only(bottom=ft.BorderSide(1, "#26364D")),
+        padding=ft.Padding.only(left=14, right=14, top=10, bottom=10),
+        bgcolor="#0B121E",
+        border=ft.Border.only(bottom=ft.BorderSide(1, BORDER)),
     )
 
     # Android app configuration (used by the Flet Android project template).
@@ -1693,63 +1732,96 @@ def _build_main(page: ft.Page) -> None:
     )
 
     # Editor screen: a focused IDE workspace with clear primary actions.
-    toolbar = ft.Column(
-        controls=[
-            ft.Row(
-                controls=[
-                    run_button,
-                    stop_button,
-                    ft.Button(content="حفظ", on_click=lambda e: save_and_update()),
-                    ft.Button(content="الملفات", on_click=toggle_file_explorer),
-                    ft.Button(content="المزيد", on_click=lambda e: show_screen("more")),
-                ],
-                wrap=True,
-                spacing=6,
-            ),
-        ],
-        spacing=8,
+    toolbar = ft.Container(
+        content=ft.Row(
+            controls=[
+                run_button,
+                stop_button,
+                ft.Button(
+                    content="حفظ",
+                    on_click=lambda e: save_and_update(),
+                    bgcolor="#19263A",
+                    color=TEXT,
+                    style=_button_style(),
+                ),
+                ft.Button(
+                    content="الملفات",
+                    on_click=toggle_file_explorer,
+                    bgcolor="#19263A",
+                    color=TEXT,
+                    style=_button_style(),
+                ),
+                ft.Button(
+                    content="المزيد",
+                    on_click=lambda e: show_screen("more"),
+                    bgcolor="#19263A",
+                    color=TEXT,
+                    style=_button_style(),
+                ),
+            ],
+            wrap=True,
+            spacing=7,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
+        padding=ft.Padding.symmetric(horizontal=9, vertical=8),
+        bgcolor="#101A29",
+        border=ft.Border.all(1, BORDER),
+        border_radius=15,
     )
 
     editor_panel = make_panel(
         ft.Column(
             controls=[
-                ft.Row(
-                    controls=[
-                        ft.Column(
-                            controls=[
-                                ft.Text("محرر الأكواد", size=16, weight=ft.FontWeight.BOLD, color=TEXT),
-                                ft.Row(
-                                    controls=[
-                                        ft.Container(width=7, height=7, bgcolor=SUCCESS, border_radius=8),
-                                        active_file_label,
-                                        ft.Text("· Python", size=10, color=MUTED),
-                                    ],
-                                    spacing=6,
-                                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                                ),
-                            ],
-                            spacing=3, expand=True,
-                        ),
-                        output_toggle_button,
-                    ],
-                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ft.Container(
+                    content=ft.Row(
+                        controls=[
+                            ft.Column(
+                                controls=[
+                                    ft.Text("المحرر", size=14, weight=ft.FontWeight.BOLD, color=TEXT),
+                                    ft.Row(
+                                        controls=[
+                                            ft.Container(width=7, height=7, bgcolor=ACCENT, border_radius=8),
+                                            active_file_label,
+                                            ft.Container(
+                                                content=ft.Text("PYTHON", size=9, color="#D6D0FF", weight=ft.FontWeight.BOLD),
+                                                bgcolor="#282548",
+                                                border=ft.Border.all(1, "#484276"),
+                                                border_radius=7,
+                                                padding=ft.Padding.symmetric(horizontal=7, vertical=3),
+                                            ),
+                                        ],
+                                        spacing=7,
+                                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                                    ),
+                                ],
+                                spacing=4,
+                                expand=True,
+                            ),
+                            output_toggle_button,
+                        ],
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
+                    padding=ft.Padding.symmetric(horizontal=10, vertical=9),
+                    bgcolor="#121F30",
+                    border=ft.Border.all(1, "#293B53"),
+                    border_radius=12,
                 ),
                 ft.Container(
                     content=tab_buttons,
-                    padding=ft.Padding.symmetric(horizontal=2, vertical=5),
-                    bgcolor="#0D1725",
-                    border_radius=10,
+                    padding=ft.Padding.symmetric(horizontal=6, vertical=6),
+                    bgcolor="#0B1421",
+                    border=ft.Border.all(1, "#23344A"),
+                    border_radius=12,
                     rtl=False,
                 ),
                 editor_frame,
                 explorer_panel,
-
             ],
-            spacing=12,
+            spacing=9,
         ),
-        padding=12,
-        radius=20,
+        padding=10,
+        radius=16,
     )
 
     # Search and project tools
@@ -2342,15 +2414,21 @@ def _build_main(page: ft.Page) -> None:
         button = ft.Button(
             content=ft.Column(
                 controls=[
-                    ft.Text(symbol, size=17, weight=ft.FontWeight.BOLD),
+                    ft.Text(symbol, size=16, weight=ft.FontWeight.BOLD),
                     ft.Text(label, size=10, weight=ft.FontWeight.BOLD),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=1,
+                spacing=2,
             ),
             on_click=lambda e, target=key: show_screen(target),
-            bgcolor="#302D59" if key == "editor" else "#121C2A",
-            color="#E3DFFF" if key == "editor" else MUTED,
+            bgcolor="#302A59" if key == "editor" else "#111B29",
+            color="#E8E3FF" if key == "editor" else "#9AA9BD",
+            style=_button_style(
+                radius=12,
+                horizontal=3,
+                vertical=8,
+                border_color="#51498B" if key == "editor" else "#26364D",
+            ),
             expand=True,
         )
         nav_buttons[key] = button
@@ -2363,19 +2441,18 @@ def _build_main(page: ft.Page) -> None:
             alignment=ft.MainAxisAlignment.SPACE_AROUND,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         ),
-        padding=ft.Padding.only(left=9, right=9, top=8, bottom=8),
-        bgcolor="#0E1623",
-        border=ft.Border.only(top=ft.BorderSide(1, "#243147")),
+        padding=ft.Padding.symmetric(horizontal=7, vertical=7),
+        bgcolor="#101A28",
+        border=ft.Border.all(1, BORDER),
+        border_radius=17,
     )
 
     status_bar = ft.Container(
         content=ft.Row(
             controls=[
-                ft.Container(
-                    width=7, height=7, bgcolor=SUCCESS, border_radius=8,
-                ),
+                status_indicator,
                 ft.Container(content=status_text, expand=True),
-                ft.Text("ANDROID · PYTHON", size=9, color="#718098"),
+                ft.Text("PYTHON WORKSPACE", size=9, color="#718098"),
             ],
             spacing=8,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
