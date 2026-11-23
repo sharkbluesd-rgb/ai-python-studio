@@ -1,66 +1,41 @@
-# AI Python Studio — Two-Part Delivery Plan
+# Flet APK Studio — focused delivery plan
 
-Target branch: `feature/studio-2.0`  
-Rule: finish Part 1 and stabilize it before changing the main editor screen for Part 2.
+Target branch: \`feature/studio-2.0\`
 
-This plan deliberately separates the work by delivery priority, not by splitting the repository into two unrelated applications. Both parts remain in the same project and branch.
+## Product scope
 
-## Part 1 — Core mobile Python editor
+The application has one job: package a Python/Flet project as an Android APK through GitHub Actions. The in-app code editor, IDE navigation, local Python runner and unrelated development panels are out of scope.
 
-**Priority: first. Goal: make the editor comfortable and reliable to use every day.**
+## Main workflow
 
-### Included
-- Mobile-first, responsive editor screen with the code area taking most of the available space.
-- Arabic RTL application chrome, with source code, filenames, and paths kept LTR.
-- Collapsible file explorer, hidden by default.
-- Reliable tabs: open, switch, close, active-file indication, and safe save behavior.
-- Small primary toolbar: Save, Run, Stop, Files, and More.
-- Collapsible output / diagnostics panel.
-- Preserve the installed editor extension features: Python highlighting, line numbers, folding, and autocomplete.
-- Focused regression tests for editing, file navigation, persistence, and running scripts.
+1. Project intake: create the included Flet Android starter or import a ZIP.
+2. Project validation: check the Flet manifest, \`src/main.py\` and APK workflow.
+3. Android configuration: update app name, package ID, version and build number.
+4. GitHub connection: OAuth Device Flow, repository selection/creation.
+5. Cloud build: upload project, dispatch the workflow and identify only the newly dispatched run.
+6. Release: show job/step status, fetch failure logs, and download the APK only from a successful run.
 
-### Acceptance checklist
-- [ ] Usable on a narrow Android screen without horizontal overflow.
-- [ ] The editor remains the main visible surface; secondary panels open only when requested.
-- [ ] Opening, switching, and closing tabs never silently loses saved content.
-- [ ] Save, Run, Stop, and output/error states work and provide feedback.
-- [ ] Existing project files and capabilities are preserved.
-- [ ] Unit tests, static checks, and the Android build workflow pass.
+## Acceptance checklist
 
-### Main code areas
-`src/main.py`, `src/editor_tabs.py`, related editor/workspace tests.
+- [ ] No CodeEditor dependency or editor screen remains.
+- [ ] Import ZIP preserves valid source files and assets while enforcing archive/path limits.
+- [ ] The Flet starter contains the correct entry point, manifest and manual APK workflow.
+- [ ] Package ID, version and build number are validated before changing project files.
+- [ ] GitHub credentials remain session-only and are never written into project files.
+- [ ] Upload rejects common secret patterns and unsafe paths.
+- [ ] A build request is matched to a newly dispatched run, not an older successful run.
+- [ ] Build logs are visible when a job fails.
+- [ ] APK download is enabled only after a successful run and the APK archive is structurally validated.
+- [ ] Responsive phone UI, unit tests, static checks and GitHub Actions pass.
+- [ ] Physical Android installation and first-launch testing are recorded separately from CI.
 
-## Part 2 — Advanced tools, integrations, and release validation
+## Security notes
 
-**Priority: second. Start after Part 1's screen and navigation are stable.**
-
-### Included
-- Move secondary actions into a compact Tools / More area instead of crowding the editor.
-- Verify and repair project search/replace, templates, ZIP import/export, project diagnostics, and package management.
-- Verify GitHub Device Flow, repository operations, Actions dispatch/status/logs, and APK artifact validation.
-- Verify the bundled Skills Library remains searchable and treats imported skill content as untrusted reference text.
-- Keep AI provider setup optional and explicit. Do not advertise AI chat as operational until a real end-to-end provider test passes.
-- Check actual Flet 1.1.2 and editor-extension web compatibility before attempting web deployment.
-- Update documentation and release notes to reflect only tested behavior and known limitations.
-
-### Acceptance checklist
-- [ ] Every visible advanced action works and has clear success/error feedback.
-- [ ] Search, import/export, diagnostics, package, and GitHub workflows have regression tests.
-- [ ] Security checks and the full CI workflow pass.
-- [ ] Android and web compatibility statements are backed by successful builds/tests.
-- [ ] Known limitations are stated accurately: local `exec()` is not a sandbox; no native shell or full interactive debugger is included unless later implemented and tested.
-
-### Main code areas
-Existing project-tool, package, GitHub, skills, AI, test, and deployment modules. Avoid competing edits to the main editor layout while Part 1 is in progress.
+GitHub \`repo\` and \`workflow\` scopes are broad. Users must inspect imported source and workflow files before triggering Actions. Never place credentials, signing keys or API secrets in an imported project. Cloud build success is not proof that arbitrary third-party dependencies are safe or Android-compatible.
 
 ## Working rules
-1. Work only on `feature/studio-2.0`; do not modify `main`.
-2. Finish Part 1 before broad Part 2 UI changes.
-3. Inspect current code before adding a feature; prefer fixing and testing existing functionality over duplicating it.
-4. Do not add dummy controls, fake data, or placeholder success messages.
-5. Run targeted tests after each change, then the full CI workflow before calling a part complete.
-6. A successful APK build alone does not prove that the web version is deployed or functional.
 
-## GitHub work items
-- Part 1: [Finish the mobile-first Python editor core](https://github.com/sharkbluesd-rgb/ai-python-studio/issues/1)
-- Part 2: [Complete advanced tools, integrations, and release validation](https://github.com/sharkbluesd-rgb/ai-python-studio/issues/2)
+1. Work only on \`feature/studio-2.0\`; do not modify \`main\`.
+2. Prefer small changes with focused tests.
+3. Do not add fake build success states or sample APK artifacts.
+4. Report web-preview, cloud-build and physical-device validation as separate results.

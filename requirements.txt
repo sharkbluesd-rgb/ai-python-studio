@@ -1,2 +1,1 @@
 flet==1.1.2
-flet-code-editor==1.1.2

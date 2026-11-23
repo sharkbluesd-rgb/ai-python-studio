@@ -1,24 +1,24 @@
-name: Build and deploy AI Python Studio Web Preview
+name: Build and deploy Flet APK Studio Web Preview
 
 on:
   push:
     branches:
       - feature/studio-2.0
     paths:
-      - "src/web_preview.py"
-      - "src/skills_manager.py"
-      - "src/agent_skills/**"
+      - "src/main.py"
+      - "src/flet_project.py"
+      - "src/github_cloud.py"
+      - "src/workspace.py"
+      - "src/templates.py"
       - "tools/build_static_web_preview.py"
-      - "tools/smoke_test_flet_web.py"
       - "web-preview-static/**"
-      - "web-flet-editor/**"
-      - "tests/test_web_preview.py"
-      - "pyproject.toml"
+      - "tests/test_app_startup.py"
+      - "tests/test_builder_preview.py"
       - ".github/workflows/web-preview.yml"
   workflow_dispatch:
 
 concurrency:
-  group: pages-preview-static
+  group: pages-flet-apk-studio
   cancel-in-progress: true
 
 permissions:
@@ -26,7 +26,7 @@ permissions:
 
 jobs:
   build:
-    name: Build standalone mobile browser preview
+    name: Test builder and prepare browser preview
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -34,92 +34,67 @@ jobs:
     steps:
       - name: Check out feature branch
         uses: actions/checkout@v7
+
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
-      - name: Install project and test dependencies
+
+      - name: Install project and quality tools
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e .
-          python -m pip install flet-cli==1.1.2
+          python -m pip install ruff bandit pip-audit
+
       - name: Compile Python source
-        run: python -m compileall -q src tests tools web-flet-editor/src
-      - name: Run browser preview and startup tests
+        run: python -m compileall -q src tests tools
+
+      - name: Run unit and startup tests
         env:
           PYTHONPATH: src
-        run: python -m unittest discover -s tests -p "test_web_preview.py" -v
-      - name: Build standalone static preview
-        env:
-          PYTHONPATH: src
+        run: python -m unittest discover -s tests -v
+
+      - name: Run static and security checks
+        run: |
+          ruff check src tests --select E4,E7,E9,F
+          bandit -q -r src -lll
+          pip-audit -r requirements.txt
+
+      - name: Build standalone APK builder preview
         run: python tools/build_static_web_preview.py --output build/web
-      - name: Build isolated Flet CodeEditor web app
-        run: |
-          flet build web web-flet-editor \
-            --base-url /ai-python-studio/flet-editor/ \
-            --route-url-strategy hash \
-            --web-renderer canvaskit \
-            --no-cdn \
-            --no-wasm \
-            --output build/web/flet-editor \
-            --yes
-      - name: Install Chromium for Flet browser smoke test
-        run: |
-          python -m pip install playwright
-          python -m playwright install --with-deps chromium
-      - name: Run built Flet app in Chromium
-        run: |
-          # Flet embeds the GitHub Pages project base URL in its web bootstrap.
-          # Mirror that exact URL locally; serving the app at "/" leaves Flutter
-          # requesting assets from the wrong path and produces an empty page.
-          mkdir -p build/web/ai-python-studio
-          ln -s ../flet-editor build/web/ai-python-studio/flet-editor
-          python -m http.server 8765 --directory build/web > /tmp/flet-editor-server.log 2>&1 &
-          server_pid=$!
-          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
-          for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:8765/ai-python-studio/flet-editor/ > /dev/null; then
-              break
-            fi
-            sleep 1
-          done
-          FLET_EDITOR_URL=http://127.0.0.1:8765/ai-python-studio/flet-editor/ python tools/smoke_test_flet_web.py
-      - name: Verify static output and skill catalog
+
+      - name: Verify static preview
         run: |
           test -s build/web/index.html
           test -s build/web/style.css
           test -s build/web/app.js
           python - <<'PY'
-          import json
           from pathlib import Path
-          root = Path('build/web')
-          skills = json.loads((root / 'skills.json').read_text(encoding='utf-8'))
-          assert len(skills) >= 20, f'Only {len(skills)} skills bundled'
-          html = (root / 'index.html').read_text(encoding='utf-8')
-          assert 'href="./style.css"' in html and 'src="./app.js"' in html
-          assert 'href="./flet-editor/"' in html
-          flet_root = root / 'flet-editor'
-          assert (flet_root / 'index.html').is_file(), 'Flet CodeEditor build is missing index.html'
-          assert any(p.suffix == '.js' for p in flet_root.rglob('*') if p.is_file()), 'Flet JavaScript runtime assets are missing'
-          assert any(p.name in {'pyodide.mjs', 'pyodide.js'} for p in flet_root.rglob('*') if p.is_file()), 'Local Pyodide runtime is missing'
-          assert any('canvaskit' in p.parts for p in flet_root.rglob('*') if p.is_file()), 'Local CanvasKit assets are missing'
-          assert not any(p.suffix in {'.wasm', '.mjs'} for p in root.iterdir() if p.is_file())
-          print(f'Verified static UI ({len(skills)} skills) and isolated Flet CodeEditor web build.')
+          root = Path("build/web")
+          html = (root / "index.html").read_text(encoding="utf-8")
+          script = (root / "app.js").read_text(encoding="utf-8")
+          assert "Flet APK Studio" in html
+          assert "رفع المشروع وبدء بناء APK" in html
+          assert "CodeEditor" not in html + script
+          assert 'id="source-editor"' not in html
+          print("Verified responsive Flet APK builder preview.")
           PY
-          du -sh build/web
-      - name: Upload standalone browser preview
+
+      - name: Upload browser preview
         uses: actions/upload-artifact@v7
         with:
-          name: ai-python-studio-web-preview
+          name: flet-apk-studio-web-preview
           path: build/web
           if-no-files-found: error
           retention-days: 14
+
       - name: Upload Pages deployment artifact
         uses: actions/upload-pages-artifact@v4
         with:
           path: build/web
           name: github-pages
+
   deploy:
     name: Publish browser preview
     needs: build
@@ -133,11 +108,12 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Deploy standalone preview to GitHub Pages
+      - name: Deploy preview to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
         with:
           artifact_name: github-pages
+
       - name: Report deployment
         if: always()
-        run: echo 'Inspect build and deploy job results before sharing the preview URL.' >> $GITHUB_STEP_SUMMARY
+        run: echo 'Check build and deploy job results before sharing the preview URL.' >> $GITHUB_STEP_SUMMARY

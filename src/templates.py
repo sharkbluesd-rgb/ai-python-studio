@@ -100,15 +100,18 @@ TEMPLATES: dict[str, dict[str, str]] = {
         ),
         "requirements.txt": "flet==1.1.2\n",
         ".github/workflows/build-apk.yml": (
-            "name: Build Android APK\n\non:\n  workflow_dispatch:\n  push:\n    branches: [main]\n\n"
+            "name: Build Flet Android APK\n\non:\n  workflow_dispatch:\n\n"
+            "permissions:\n  contents: read\n\n"
             "jobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n"
             "      - uses: actions/checkout@v4\n"
             "      - name: Build APK\n        id: build\n        uses: flet-dev/flet-build-action@v1\n"
             "        with:\n          target: apk\n          runner-python-version: '3.12'\n"
-            "          bundled-python-version: '3.12'\n          build-version: '0.1.0'\n"
+            "          bundled-python-version: '3.12'\n          build-version: '1.0.0'\n"
             "          build-number: ${{ github.run_number }}\n"
-            "      - uses: actions/upload-artifact@v4\n        with:\n          name: android-apk\n"
-            "          path: ${{ steps.build.outputs.archive-path }}\n          if-no-files-found: error\n"
+            "      - name: Upload APK artifact\n        uses: actions/upload-artifact@v4\n"
+            "        with:\n          name: flet-apk\n"
+            "          path: ${{ steps.build.outputs.archive-path }}\n"
+            "          if-no-files-found: error\n          retention-days: 14\n"
         ),
         "README.md": "# Flet Android App\n\nUpload this project to GitHub, run Build Android APK from Actions, then download the android-apk artifact.\n",
     },

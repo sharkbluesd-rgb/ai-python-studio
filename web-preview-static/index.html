@@ -2,39 +2,74 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#17191d"><title>AI Python Studio</title>
-<script>
-(async()=>{if(!("serviceWorker"in navigator))return;try{const regs=await navigator.serviceWorker.getRegistrations();const old=regs.filter(r=>new URL(r.scope).pathname.startsWith("/ai-python-studio/"));if(!old.length)return;await Promise.all(old.map(r=>r.unregister()));if("caches"in window){const keys=await caches.keys();await Promise.all(keys.filter(k=>/flutter|flet/i.test(k)).map(k=>caches.delete(k)))}if(navigator.serviceWorker.controller&&!sessionStorage.getItem("studio-static-preview-cleaned")){sessionStorage.setItem("studio-static-preview-cleaned","1");location.reload()}}catch(e){console.warn("Cache cleanup:",e)}})();
-</script>
-<link rel="stylesheet" href="./style.css">
+<meta name="theme-color" content="#080c14"><meta name="description" content="معاينة Flet APK Studio لتحويل مشاريع Python وFlet إلى تطبيقات Android APK.">
+<title>Flet APK Studio</title><link rel="stylesheet" href="./style.css"><script src="./app.js" defer></script>
 </head>
 <body>
-<header class="appbar">
- <button class="icon-btn menu-btn" id="toggle-files" aria-label="إظهار الملفات">☰</button>
- <div class="brand"><div class="logo">Py</div><div><b>AI Python Studio</b><small id="project-title">مشروعي · Python</small></div></div>
- <div class="app-actions"><span class="save-state" id="save-state">● محفوظ</span><button class="icon-btn" id="save-file" title="حفظ">▣</button><button class="run-btn" id="check-code" title="فحص الكود">▶ <span>تشغيل</span></button></div>
+<header class="topbar">
+ <a class="brand" href="./"><span class="brand-mark">APK</span><span class="brand-copy"><strong>Flet APK Studio</strong><small>Python → Android</small></span></a>
+ <span class="header-state"><i></i> معاينة الواجهة</span>
 </header>
-<div class="workspace">
- <aside class="file-sidebar" id="file-sidebar">
-  <div class="side-head"><b>ملفات المشروع</b><div><button class="mini-btn" id="new-file" title="ملف جديد">＋</button><button class="mini-btn" id="new-folder" title="مجلد جديد">▱</button></div></div>
-  <div class="project-root"><span>▾</span> 📁 <b>MyProject</b></div>
-  <div class="file-tree" id="file-tabs"></div>
-  <div class="sidebar-bottom"><span class="dot"></span> مساحة عمل محلية تجريبية</div>
- </aside>
- <main class="editor-area">
-  <div class="editor-topline"><div class="breadcrumbs">MyProject <span>›</span> <b id="current-file">main.py</b></div><div class="editor-tools"><button class="tool-btn" id="undo-edit" title="تراجع">↶</button><button class="tool-btn" id="redo-edit" title="إعادة">↷</button><button class="tool-btn" id="font-down" title="تصغير الخط">A−</button><button class="tool-btn" id="font-up" title="تكبير الخط">A+</button></div></div>
-  <div class="editor-toolbar"><span class="language-tag"><i></i> Python</span><span>UTF-8&nbsp; · &nbsp;مسافات: 4</span></div>
-  <div class="editor-wrap"><div class="line-gutter" id="line-gutter">1</div><textarea id="editor" spellcheck="false" autocapitalize="off" autocomplete="off" dir="ltr" aria-label="Python code editor"></textarea></div>
-  <div class="editor-status"><span id="editor-result">جاهز · ابدأ بكتابة كود Python</span><span>Ln 1, Col 1&nbsp; | &nbsp;Python 3</span></div>
-  <section class="bottom-panel">
-   <div class="bottom-tabs"><button class="bottom-tab active" data-panel="output">المخرجات</button><button class="bottom-tab" data-panel="terminal">الطرفية</button><button class="bottom-tab" data-panel="problems">المشكلات</button><span class="panel-spacer"></span><button class="tool-btn" id="collapse-output">⌄</button></div>
-   <div class="bottom-content" id="bottom-content"><div class="console-line"><span class="prompt">&gt;&gt;&gt;</span> مرحباً بك في AI Python Studio</div><div class="console-muted">معاينة الويب تعرض تصميم المحرر فقط؛ تشغيل Python والطرفية متاحان في تطبيق Android.</div></div>
-  </section>
- </main>
-</div>
-<nav class="mobile-nav"><button class="active" data-mobile="editor">⌨<small>المحرر</small></button><button id="mobile-files">▤<small>الملفات</small></button><button data-view="skills">✧<small>المهارات</small></button><button data-view="assistant">✳<small>مساعد AI</small></button></nav>
-<section class="secondary-view" id="view-skills"><div class="secondary-head"><button class="back-editor">‹ العودة للمحرر</button><h1>مكتبة المهارات</h1><span class="pill" id="skill-count">جارٍ التحميل…</span></div><div class="secondary-card"><input id="skill-search" class="search" placeholder="ابحث بالعربية أو الإنجليزية: Flet, GitHub, Security…"><div id="skill-results" class="skill-list"><p class="muted">يتم تحميل مكتبة المهارات…</p></div></div></section>
-<section class="secondary-view" id="view-assistant"><div class="secondary-head"><button class="back-editor">‹ العودة للمحرر</button><h1>مساعد AI البرمجي</h1></div><div class="secondary-card assistant"><div class="warning">للتجربة فقط: مفتاح API يُرسل من المتصفح ويمكن كشفه. لا تستخدم مفتاحاً إنتاجياً.</div><label>Gemini API Key<input id="api-key" type="password" dir="ltr" placeholder="أدخل مفتاح الاختبار"></label><label>النموذج<input id="model" dir="ltr" value="gemini-2.5-flash"></label><label>سؤالك<textarea id="prompt" rows="5" placeholder="اشرح لي سبب هذا الخطأ…"></textarea></label><label class="check"><input type="checkbox" id="consent"> أوافق على إرسال السؤال ومراجع المهارات إلى Google.</label><button class="btn primary" id="ask-ai">إرسال السؤال</button><pre id="ai-result" class="ai-result">ستظهر الإجابة هنا.</pre></div></section>
-<footer>AI Python Studio · معاينة الواجهة · <a href="./flet-editor/" style="color:#b8adff;text-decoration:underline">اختبار محرر Flet الحقيقي في المتصفح</a></footer>
-<script src="./app.js" defer></script>
+<main class="page-shell">
+ <section class="hero">
+  <div class="hero-copy">
+   <div class="eyebrow"><span>FLET</span><span>ANDROID BUILDER</span></div>
+   <h1>حوّل مشروع Flet إلى <em>APK</em></h1>
+   <p>جهّز مشروع Python، اضبط بيانات تطبيق Android، واربط GitHub لتشغيل البناء السحابي وتنزيل ملف APK.</p>
+   <div class="hero-note"><span class="spark">✦</span> لا تحتاج Android SDK أو Gradle على هاتفك؛ البناء يتم عبر GitHub Actions.</div>
+  </div>
+  <div class="hero-visual" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="app-tile"><span class="tile-mark">Py</span><b>FLET</b><small>ANDROID</small></div><div class="arrow-link">→</div><div class="apk-tile"><span>APK</span><small>READY TO BUILD</small></div></div>
+ </section>
+ <section class="steps" aria-label="مراحل البناء">
+  <div class="step active"><span>01</span><b>المشروع</b></div><div class="step"><span>02</span><b>إعداد التطبيق</b></div><div class="step"><span>03</span><b>GitHub</b></div><div class="step"><span>04</span><b>ملف APK</b></div>
+ </section>
+ <div class="layout">
+  <div class="forms">
+   <section class="card">
+    <div class="card-heading"><span class="number">01</span><div><h2>مشروع Flet</h2><p>استورد مشروعك المضغوط أو ابدأ من قالب جاهز.</p></div></div>
+    <div class="upload-zone" id="upload-zone">
+     <div class="upload-icon">↑</div><strong>اختر ملف ZIP من الهاتف</strong>
+     <span>يجب أن يحتوي المشروع على pyproject.toml وملف src/main.py</span>
+     <input id="project-zip" type="file" accept=".zip,application/zip" hidden>
+     <button class="btn btn-primary" id="choose-zip" type="button">اختيار ملف المشروع</button>
+     <div class="file-state" id="file-state" aria-live="polite">لم يتم اختيار ملف بعد</div>
+    </div>
+    <div class="divider"><span>أو</span></div>
+    <button class="btn btn-secondary full" id="starter-btn" type="button">＋ إنشاء قالب Flet Android جديد</button>
+    <p class="small-hint">القالب يتضمن نقطة تشغيل Flet وملف إعدادات Android وWorkflow لبناء APK.</p>
+   </section>
+   <section class="card">
+    <div class="card-heading"><span class="number">02</span><div><h2>إعدادات تطبيق Android</h2><p>تُكتب هذه البيانات داخل ملف pyproject.toml.</p></div></div>
+    <label class="field">اسم التطبيق<input type="text" value="My Flet App" autocomplete="off"></label>
+    <label class="field">معرّف الحزمة<input type="text" value="com.example.myapp" dir="ltr" autocomplete="off"></label>
+    <div class="field-row"><label class="field">الإصدار<input type="text" value="1.0.0" dir="ltr"></label><label class="field">رقم البناء<input type="number" min="1" value="1" dir="ltr"></label></div>
+   </section>
+   <section class="card">
+    <div class="card-heading"><span class="number">03</span><div><h2>ربط GitHub</h2><p>الاتصال مطلوب لرفع المشروع وتشغيل GitHub Actions.</p></div></div>
+    <label class="field">OAuth Client ID<input type="text" placeholder="ضع Client ID فقط" dir="ltr"></label>
+    <div class="button-row"><button class="btn btn-secondary" id="connect-btn" type="button">ربط GitHub</button><span class="connection-state"><i></i> غير متصل في المعاينة</span></div>
+    <div class="field-row"><label class="field">المستودع<input type="text" placeholder="username/my-flet-app" dir="ltr"></label><label class="field">الفرع<input type="text" value="main" dir="ltr"></label></div>
+    <div class="button-row"><button class="btn btn-quiet" id="repos-btn" type="button">عرض مستودعاتي</button><button class="btn btn-quiet" id="new-repo-btn" type="button">إنشاء مستودع</button></div>
+    <p class="security-note">يتطلب الربط صلاحيتَي repo وworkflow. راجع ملفات المشروع وActions قبل البناء، ولا ترفع مفاتيح API أو كلمات مرور.</p>
+   </section>
+  </div>
+  <aside class="side-column">
+   <section class="card build-card">
+    <div class="card-heading"><span class="number number-green">04</span><div><h2>بناء APK</h2><p>تسلسل العملية بعد تجهيز المشروع.</p></div></div>
+    <div class="pipeline">
+     <div class="pipeline-item done"><span class="pipeline-icon">✓</span><div><b>فحص ملفات المشروع</b><small>pyproject · src/main.py · workflow</small></div></div><div class="pipeline-line"></div>
+     <div class="pipeline-item"><span class="pipeline-icon">2</span><div><b>رفع الملفات إلى GitHub</b><small>Commit للمشروع على الفرع المحدد</small></div></div><div class="pipeline-line"></div>
+     <div class="pipeline-item"><span class="pipeline-icon">3</span><div><b>بناء Android</b><small>Flet Build Action · GitHub Actions</small></div></div><div class="pipeline-line"></div>
+     <div class="pipeline-item"><span class="pipeline-icon">4</span><div><b>تنزيل APK</b><small>بعد نجاح البناء والتحقق من الملف</small></div></div>
+    </div>
+    <button class="btn btn-build full" id="build-btn" type="button">رفع المشروع وبدء بناء APK <span>→</span></button>
+    <button class="btn btn-quiet full" id="refresh-btn" type="button">متابعة حالة البناء</button>
+    <div class="preview-message" id="preview-message" role="status" aria-live="polite">هذه معاينة تصميم فقط؛ لم يبدأ أي رفع أو بناء.</div>
+   </section>
+   <section class="card info-card"><div class="info-icon">i</div><div><b>كيف يعمل البناء؟</b><p>التطبيق يرسل ملفات المشروع إلى مستودعك. GitHub Actions يشغّل أداة Flet الرسمية، ثم يعيد Artifact يحتوي على APK.</p></div></section>
+   <section class="preview-disclaimer"><span class="disclaimer-dot"></span><div><b>وضع المعاينة</b><p>الاختيار يعرض اسم ZIP فقط. لا يتم إرسال ملفات أو الاتصال بخدمة GitHub من هذه الصفحة.</p></div></section>
+  </aside>
+ </div>
+</main>
+<footer>Flet APK Studio <span>·</span> معاينة واجهة بناء تطبيقات Android</footer>
 </body></html>

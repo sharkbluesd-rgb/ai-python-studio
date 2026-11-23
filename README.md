@@ -1,82 +1,59 @@
-# AI Python Studio 1.2.0
+# Flet APK Studio 2.0
 
-A mobile-first Python development workspace built with Flet for Android.
+**Flet APK Studio** is a focused mobile-first tool for turning an existing Python/Flet project into an Android APK. It is not a Python IDE and does not contain a code editor.
 
-## Current features
+## Build flow
 
-- Native Flet code editor extension with Python syntax highlighting, line numbers, folding and autocomplete.
-- Persistent, app-private projects and nested source folders.
-- Multi-file Python project structure and supported text/config files.
-- Create nested folders; create, rename, duplicate and delete source files.
-- Search across project text files, replace in the current file, and preview/apply exact replacements across the whole project.
-- Offline templates for Python, automation, CLI tools, Flet apps and unit-test projects.
-- Dedicated Flet Android App template with a complete project manifest and GitHub Actions APK workflow.
-- ZIP project import/export with path traversal, symlink and size checks; common image assets are retained.
-- Python syntax checking without executing the script.
-- Offline project analysis: code metrics, severity totals and an indicative quality score.
-- Static diagnostics for hard-coded-secret patterns, dynamic execution, shell usage, pickle/YAML hazards, mutable defaults, ignored exceptions, wildcard imports, HTTP calls without timeouts and TODO markers.
-- Project report displayed in the diagnostics panel; static analysis never imports or executes project code.
-- Run, search, syntax, package and analysis actions navigate to the results screen automatically.
-- Python package manager with individual package installation, requirements installation and installed-package listing; compatibility depends on Android wheels.
-- Local trusted-code execution with captured output and tracebacks; relative file access starts at the active project root and the app working directory is restored afterwards. Optional command-line arguments are supported.
-- In-app unittest discovery for the active project's tests folder, including a 180-second cooperative execution limit.
-- GitHub Device Flow sign-in, repository listing and selection, repository creation, project upload, Actions dispatch, job status/logs, and APK artifact download.
-- GitHub sessions are held in memory only and automatically disconnected before running Python scripts, project tests, or installing third-party packages.
-- Pre-build validation for Android Flet projects, including manual workflow dispatch and artifact upload; APK download is allowed only after a successful run and APK structure verification.
-- Upload guard that blocks common GitHub/AWS token patterns, private-key headers, secret-like assignments, and environment files.
+1. Create the included Flet Android starter or import a project ZIP from your device.
+2. Set the Android app name, package ID, version and build number.
+3. Connect a GitHub account using OAuth Device Flow.
+4. Select an existing repository or create a new private repository.
+5. Upload the project, dispatch \`.github/workflows/build-apk.yml\`, and follow the GitHub Actions run.
+6. Download the APK only after the selected run completes successfully.
 
-## Agent Skills Library
+The actual APK is built by GitHub Actions using the official Flet build action. The phone does not need the Android SDK or Gradle installed.
 
-The application bundles a searchable set of specialist `SKILL.md` references for repository reconnaissance, test-driven development, safe refactoring, code review, threat modelling, prompt-injection defence, AI-agent architecture, prompt engineering, agent evaluation, Flet mobile/web development, Python debugging and Android release verification.
+## Required project structure
 
-The Skills Manager parses skill metadata, searches Arabic/English keywords, loads full instructions on demand and can prepare a size-bounded context pack for an AI provider. Imported skills retain their individual licence files. The loader treats skills as untrusted reference text and never executes scripts from a skill directory.
+An imported project must include:
 
-**Optional AI assistant:** the app includes Gemini and OpenAI provider adapters. The user supplies their own API key; it remains in application memory, and each request requires fresh consent. The open file is sent only when the user enables the explicit code-sharing option. No provider key is bundled. Live provider calls still require an internet connection, a valid key, provider quota and a manual end-to-end check. See `src/agent_skills/THIRD_PARTY_NOTICES.md` for skill attribution and licence information.
+- \`pyproject.toml\` with \`[project]\`, \`[tool.flet]\` and \`[tool.flet.app]\`.
+- \`src/main.py\` as the Flet application entry point.
+- \`.github/workflows/build-apk.yml\` with \`workflow_dispatch\`, APK build and artifact upload.
 
-## Development
-
-Python 3.10+ is required.
-
-```bash
-python -m pip install -e .
-PYTHONPATH=src python -m unittest discover -s tests -v
-python -m compileall -q src tests
-```
-
-To run the Flet application locally:
-
-```bash
-flet run
-```
-
-## Browser testing
-
-The feature branch publishes two browser previews:
-
-- [Responsive UI preview](https://sharkbluesd-rgb.github.io/ai-python-studio/)
-- [Flet CodeEditor browser test](https://sharkbluesd-rgb.github.io/ai-python-studio/flet-editor/)
-
-The second page packages the actual Flet CodeEditor extension and checks editing, two in-memory files, session-only save and Python syntax validation. It is an isolated compatibility test, not the full app from `src/main.py`. It does not execute code, install packages, access the phone filesystem, or provide GitHub OAuth. The full app's web support remains unverified.
-
-## Android APK
-
-Push to `main` or a `feature/**` branch, or start the `Build AI Python Studio APK` workflow manually from GitHub Actions. The workflow builds version `1.2.0`. The official Flet build action creates `flet-apk.zip`; GitHub Actions uploads that archive as a downloadable artifact.
-
-## Important execution warning
-
-The current local runner executes code with exec() inside the app process. It is intended only for code the device owner trusts. It is not a security sandbox. Cancellation checks Python line events but cannot reliably interrupt native extensions, blocking I/O, or every third-party call. Do not use it to run unknown code from other people.
-
-## Deliberate limitations in this release
-
-The project does not yet bundle a separate Python distribution or a general-purpose `pip` environment for Android. The package manager installs requested packages into the Python interpreter used by the app; compatibility depends on Android-compatible wheels and successful native imports. Installing a package does not guarantee that its dependencies support Android. A native shell terminal and a full interactive debugger are not included in this release. AI use requires the user to supply a valid Gemini or OpenAI API key and an internet connection; provider billing and quotas apply. The GitHub integration requires a GitHub OAuth App with Device Flow enabled and requests repo and workflow scopes to update files and run Actions. These scopes are broad; review the permissions on GitHub before authorizing.
-
+Use the in-app **Flet Android App** starter to create a project with this structure. Python dependencies must support the Python/Android ABI selected by the build workflow. A package that installs on desktop or Termux is not automatically compatible with Android.
 
 ## GitHub setup
 
-1. Create a GitHub OAuth App and enable Device Flow in its settings.
-2. Copy its Client ID into the GitHub screen in AI Python Studio. Never enter a password, Client Secret, or personal access token.
-3. Start device authorization, open the official GitHub verification URL, enter the displayed user code, and confirm from the app.
-4. Select or create a repository, upload an Android Flet project, then dispatch build-apk.yml.
-5. Refresh the run status. APK download is available only after a successful run with a valid APK artifact.
+1. Create a GitHub OAuth App and enable Device Flow.
+2. Enter its Client ID in the app. Never enter a password, Client Secret or personal access token.
+3. Approve the displayed device code at GitHub, then verify the connection in the app.
+4. Select/create a repository and start the build.
 
-The app requests repo and workflow scopes. The repo scope is used for private repository access and pushing project files; workflow is required to update workflow files and run Actions. OAuth App scopes can grant broad access to repositories.
+GitHub authorization requests \`repo\` and \`workflow\` scopes. These are broad permissions. The OAuth token is held in memory only and is cleared when disconnected or the app process ends. Review your project and every GitHub Actions workflow before uploading/building. Do not include \`.env\` files, passwords, API keys, signing keys or other secrets in the project.
+
+## Development and tests
+
+Python 3.10+ is required.
+
+\`\`\`bash
+python -m pip install -e .
+PYTHONPATH=src python -m unittest discover -s tests -v
+python -m compileall -q src tests tools
+flet run
+\`\`\`
+
+The project pins \`flet==1.1.2\`. The former \`flet-code-editor\` dependency and editor screens have been removed.
+
+## Web preview
+
+The GitHub Pages root is a responsive **UI preview** of the APK builder. It can display a selected ZIP filename and demonstrate the layout, but it does not upload files, connect to GitHub or build/download an APK. Real build operations are available in the Flet application after GitHub is connected.
+
+Preview: https://sharkbluesd-rgb.github.io/ai-python-studio/
+
+## Limitations
+
+- Builds run on GitHub Actions, not locally on the phone.
+- Build time and availability depend on GitHub Actions quotas and the project's dependencies.
+- APK download requires a successful Actions run and an artifact containing one APK.
+- Successful cloud build does not replace installation and launch testing on a physical Android device.

@@ -1,4 +1,4 @@
-"""Startup smoke tests for the Flet app's initial UI construction."""
+"""Startup smoke tests for the focused Flet APK builder."""
 
 import os
 import tempfile
@@ -27,17 +27,24 @@ class FakePage:
 
 
 class AppStartupSmokeTests(unittest.TestCase):
-    def test_main_builds_initial_editor_screen(self):
+    def test_main_builds_initial_apk_builder_screen(self):
         with tempfile.TemporaryDirectory() as storage:
             page = FakePage()
             with patch.dict(os.environ, {"FLET_APP_STORAGE_DATA": storage}):
                 main.main(page)
 
-        self.assertEqual(page.title, "AI Python Studio")
+        self.assertEqual(page.title, "Flet APK Studio")
         self.assertEqual(len(page.controls), 1)
-        self.assertGreaterEqual(page.update_count, 2)
+        self.assertGreaterEqual(page.update_count, 1)
         self.assertEqual(page.clean_count, 1)
         self.assertTrue(page.services)
+
+    def test_main_does_not_import_code_editor_extension(self):
+        import inspect
+
+        source = inspect.getsource(main)
+        self.assertNotIn("flet_code_editor", source)
+        self.assertNotIn("CodeEditor(", source)
 
 
 if __name__ == "__main__":
