@@ -23,15 +23,34 @@ from skills_manager import SkillsManager, SkillsError
 from ai_assistant import AIProviderError, generate_reply
 
 
-APP_BG = "#080D16"
-PANEL = "#121B2A"
-EDITOR_BG = "#0A111D"
-ACCENT = "#8175F5"
-TEXT = "#F2F4FC"
-MUTED = "#9AA8BC"
-SUCCESS = "#83DDB8"
-DANGER = "#FF8F9B"
+APP_BG = "#080C14"
+PANEL = "#111A28"
+PANEL_RAISED = "#152236"
+EDITOR_BG = "#080F1A"
+ACCENT = "#8B7CFF"
+TEXT = "#F3F6FC"
+MUTED = "#94A3B8"
+SUCCESS = "#6EE7B7"
+DANGER = "#FB7185"
+BORDER = "#26364D"
 OUTPUT_LIMIT = 40_000
+
+
+def _button_style(
+    *,
+    radius: int = 11,
+    horizontal: int = 12,
+    vertical: int = 8,
+    border_color: str = "#33445B",
+) -> ft.ButtonStyle:
+    """Consistent rounded, low-elevation button style for the mobile IDE."""
+    return ft.ButtonStyle(
+        shape=ft.RoundedRectangleBorder(radius=radius),
+        padding=ft.Padding.symmetric(horizontal=horizontal, vertical=vertical),
+        side=ft.BorderSide(1, border_color),
+        elevation=0,
+        text_style=ft.TextStyle(size=12, weight=ft.FontWeight.BOLD),
+    )
 
 LANGUAGE_BY_SUFFIX = {
     ".py": fce.CodeLanguage.PYTHON,
@@ -65,6 +84,16 @@ def _build_main(page: ft.Page) -> None:
     # Show a real first frame before building the editor and the other screens.
     page.title = "AI Python Studio"
     page.theme_mode = ft.ThemeMode.DARK
+    page.theme = ft.Theme(
+        input_decoration_theme=ft.InputDecorationTheme(
+            border=ft.OutlineInputBorder(
+                border_radius=11,
+                side=ft.BorderSide(1, "#304159"),
+            ),
+            hint_style=ft.TextStyle(size=12, color=MUTED),
+            label_style=ft.TextStyle(size=12, color=MUTED),
+        )
+    )
     page.bgcolor = APP_BG
     page.padding = 0
     page.spacing = 0
@@ -138,7 +167,8 @@ def _build_main(page: ft.Page) -> None:
         color=MUTED,
         size=13,
     )
-    status_text = ft.Text("تم تحميل مساحة العمل.", size=12, color=SUCCESS)
+    status_text = ft.Text("تم تحميل مساحة العمل.", size=11, color=SUCCESS, max_lines=1)
+    status_indicator = ft.Container(width=7, height=7, bgcolor=SUCCESS, border_radius=8)
     project_buttons = ft.Row(wrap=True, spacing=6)
     file_buttons = ft.Row(wrap=True, spacing=6)
     tab_buttons = ft.Row(wrap=True, spacing=4)
@@ -183,6 +213,13 @@ def _build_main(page: ft.Page) -> None:
     def set_status(message: str, color: str = MUTED) -> None:
         status_text.value = message
         status_text.color = color
+        status_indicator.bgcolor = (
+            SUCCESS if color == SUCCESS
+            else DANGER if color == DANGER
+            else ACCENT if color == ACCENT
+            else "#E5B96E" if color == "#E4C27A"
+            else MUTED
+        )
 
     def disconnect_github_before_untrusted_code(action: str) -> None:
         """Drop the OAuth session before executing code or installing third-party packages."""
@@ -1082,12 +1119,12 @@ def _build_main(page: ft.Page) -> None:
     replace_apply_button.on_click = apply_project_replace
 
     # ── Visual system: compact mobile IDE ──────────────────────────────
-    def make_panel(content, *, padding=14, radius=18, height=None):
+    def make_panel(content, *, padding=12, radius=16, height=None):
         return ft.Container(
             content=content,
             padding=padding,
             bgcolor=PANEL,
-            border=ft.Border.all(1, "#26364D"),
+            border=ft.Border.all(1, BORDER),
             border_radius=radius,
             height=height,
         )
