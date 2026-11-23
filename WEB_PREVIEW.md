@@ -17,9 +17,12 @@ Expected address:
 
 Open the Actions tab and inspect **Build and deploy AI Python Studio Web
 Preview**. The address is usable only after the deployment job reports success.
-If GitHub Pages is unavailable for the repository plan or repository settings,
-the build job still uploads a downloadable Pages artifact and the deployment
-job reports the configuration error.
+
+The workflow always uploads a downloadable
+`ai-python-studio-web-preview` artifact after a successful build. If automatic
+Pages setup is denied, the artifact is still available. The repository owner
+must enable **Settings → Pages → Build and deployment → Source: GitHub Actions**
+once, then rerun the workflow to publish the public URL.
 
 ## What this preview verifies
 

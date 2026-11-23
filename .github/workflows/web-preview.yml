@@ -26,6 +26,8 @@ jobs:
   build:
     name: Build browser preview with bundled CodeEditor extension
     runs-on: ubuntu-latest
+    outputs:
+      pages_configured: ${{ steps.configure_pages.outcome }}
     permissions:
       contents: read
       pages: write
@@ -69,21 +71,36 @@ jobs:
           echo "Web build output exists."
           find "${GITHUB_WORKSPACE}/build/web" -maxdepth 2 -type f | head -40
 
+      - name: Upload standalone browser preview
+        uses: actions/upload-artifact@v7
+        with:
+          name: ai-python-studio-web-preview
+          path: ${{ github.workspace }}/build/web
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Configure GitHub Pages
+        id: configure_pages
+        continue-on-error: true
         uses: actions/configure-pages@v5
         with:
           enablement: true
 
-      - name: Upload Pages artifact
+      - name: Explain Pages setup requirement
+        if: steps.configure_pages.outcome != 'success'
+        run: |
+          echo "::warning::The web preview artifact was uploaded, but Pages is not enabled by this GitHub connection."
+          echo "Repository owner: enable Settings > Pages > Build and deployment > Source: GitHub Actions, then rerun this workflow."
+
+      - name: Upload Pages deployment artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: build/web
+          path: ${{ github.workspace }}/build/web
           name: github-pages
-          retention-days: 14
 
   deploy:
     name: Publish browser preview
-    if: github.ref == 'refs/heads/feature/studio-2.0'
+    if: github.ref == 'refs/heads/feature/studio-2.0' && needs.build.outputs.pages_configured == 'success'
     needs: build
     runs-on: ubuntu-latest
     permissions:
