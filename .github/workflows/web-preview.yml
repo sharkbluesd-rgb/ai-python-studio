@@ -26,8 +26,6 @@ jobs:
   build:
     name: Build browser preview with bundled CodeEditor extension
     runs-on: ubuntu-latest
-    outputs:
-      pages_configured: ${{ steps.pages_result.outputs.configured }}
     permissions:
       contents: read
       pages: write
@@ -118,11 +116,6 @@ jobs:
         with:
           enablement: true
 
-      - name: Record Pages setup outcome
-        id: pages_result
-        if: always()
-        run: echo "configured=${{ steps.configure_pages.outcome }}" >> "$GITHUB_OUTPUT"
-
       - name: Explain Pages setup requirement
         if: steps.configure_pages.outcome != 'success'
         run: |
@@ -137,7 +130,7 @@ jobs:
 
   deploy:
     name: Publish browser preview
-    if: ${{ github.ref == 'refs/heads/feature/studio-2.0' && needs.build.outputs.pages_configured == 'success' }}
+    if: github.ref == 'refs/heads/feature/studio-2.0'
     needs: build
     runs-on: ubuntu-latest
     permissions:
