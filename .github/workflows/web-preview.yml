@@ -12,8 +12,7 @@ on:
       - "src/templates.py"
       - "tools/build_static_web_preview.py"
       - "web-preview-static/**"
-      - "tests/test_app_startup.py"
-      - "tests/test_builder_preview.py"
+      - "tests/**"
       - ".github/workflows/web-preview.yml"
   workflow_dispatch:
 
