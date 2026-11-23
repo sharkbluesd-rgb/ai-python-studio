@@ -29,9 +29,9 @@ class SkillsManagerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             fixtures = {
-                "security/one/SKILL.md": "---\\nname: security-one\\ndescription: security review\\n---\\nSecurity guidance",
-                "security/two/SKILL.md": "---\\nname: security-two\\ndescription: security audit\\n---\\nAudit guidance",
-                "testing/three/SKILL.md": "---\\nname: testing-three\\ndescription: security testing\\n---\\nTesting guidance",
+                "security/one/SKILL.md": "---\nname: security-one\ndescription: security review\n---\nSecurity guidance",
+                "security/two/SKILL.md": "---\nname: security-two\ndescription: security audit\n---\nAudit guidance",
+                "testing/three/SKILL.md": "---\nname: testing-three\ndescription: security testing\n---\nTesting guidance",
             }
             for relative, text in fixtures.items():
                 path = root / relative
