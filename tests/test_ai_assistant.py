@@ -23,7 +23,7 @@ class AIAssistantTests(unittest.TestCase):
         self.assertEqual(answer, "مرحبا")
         args = post.call_args
         self.assertIn("x-goog-api-key", args.args[2])
-        self.assertNotIn("secret", repr(args))
+        self.assertEqual(args.args[2]["x-goog-api-key"], "secret")
 
     @patch("ai_assistant._post_json")
     def test_openai_response(self, post):

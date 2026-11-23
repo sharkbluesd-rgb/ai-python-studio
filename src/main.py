@@ -2033,7 +2033,6 @@ def _build_main(page: ft.Page) -> None:
                 ai_consent,
                 ft.Button(
                     content="إرسال إلى المساعد",
-                    icon=ft.Icons.AUTO_AWESOME,
                     on_click=ask_ai_assistant,
                 ),
                 ai_status,
