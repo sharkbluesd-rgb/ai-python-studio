@@ -2,43 +2,39 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0a1020"><title>AI Python Studio — Web Preview</title>
+<meta name="theme-color" content="#17191d"><title>AI Python Studio</title>
 <script>
-/* Remove the old Flutter/Flet service worker and its stale cache after switching
-   this project URL to the lightweight static browser preview. */
-(async () => {
-  if (!("serviceWorker" in navigator)) return;
-  try {
-    const registrations = await navigator.serviceWorker.getRegistrations();
-    const stale = registrations.filter((registration) =>
-      new URL(registration.scope).pathname.startsWith("/ai-python-studio/")
-    );
-    if (!stale.length) return;
-    await Promise.all(stale.map((registration) => registration.unregister()));
-    if ("caches" in window) {
-      const keys = await caches.keys();
-      await Promise.all(keys.filter((key) => /flutter|flet/i.test(key)).map((key) => caches.delete(key)));
-    }
-    if (navigator.serviceWorker.controller && !sessionStorage.getItem("studio-static-preview-cleaned")) {
-      sessionStorage.setItem("studio-static-preview-cleaned", "1");
-      location.reload();
-    }
-  } catch (error) {
-    console.warn("Preview cache cleanup could not finish.", error);
-  }
-})();
+(async()=>{if(!("serviceWorker"in navigator))return;try{const regs=await navigator.serviceWorker.getRegistrations();const old=regs.filter(r=>new URL(r.scope).pathname.startsWith("/ai-python-studio/"));if(!old.length)return;await Promise.all(old.map(r=>r.unregister()));if("caches"in window){const keys=await caches.keys();await Promise.all(keys.filter(k=>/flutter|flet/i.test(k)).map(k=>caches.delete(k)))}if(navigator.serviceWorker.controller&&!sessionStorage.getItem("studio-static-preview-cleaned")){sessionStorage.setItem("studio-static-preview-cleaned","1");location.reload()}}catch(e){console.warn("Cache cleanup:",e)}})();
 </script>
 <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-<header class="topbar"><div class="brand"><div class="logo">Py</div><div><b>AI Python Studio</b><small>استوديو بايثون الذكي</small></div></div><span class="status"><i></i> معاينة ويب مستقلة</span></header>
-<main class="layout">
-<aside class="sidebar"><div class="side-label">مساحة العمل</div><button class="nav active" data-view="editor">⌘ <span>محرر الأكواد</span></button><button class="nav" data-view="skills">✧ <span>مكتبة المهارات</span></button><button class="nav" data-view="assistant">✳ <span>مساعد AI</span></button><div class="side-note">نسخة المتصفح لا تحتاج Flutter أو Pyodide أو إضافات Flet لتحميل الواجهة.</div></aside>
-<section class="content">
-<section class="view active" id="view-editor"><div class="page-head"><div><p class="eyebrow">WORKSPACE / EDITOR</p><h1>محرر Python</h1><p>اكتب وعدّل ملفاتك وتحقق من البنية الأساسية للكود.</p></div><span class="pill">جلسة محلية مؤقتة</span></div>
-<div class="panel"><div class="panel-head"><div><b>ملفات المشروع</b><small>اختر الملف الذي تريد تحريره</small></div><button class="btn ghost" id="new-file">＋ ملف جديد</button></div><div class="file-tabs" id="file-tabs"></div><div class="editor-toolbar"><span id="current-file">main.py</span><span>Python · UTF-8</span></div><textarea id="editor" spellcheck="false" autocapitalize="off" autocomplete="off" dir="ltr" aria-label="Python code editor"></textarea><div class="actions"><button class="btn primary" id="check-code">تحقق من الكود</button><button class="btn ghost" id="reset-code">استعادة المثال</button></div><div id="editor-result" class="result">جاهز — ابدأ بكتابة كود Python.</div></div><p class="hint">هذه معاينة واجهة؛ لا تشغّل الكود ولا تصل إلى ملفات الهاتف أو الطرفية.</p></section>
-<section class="view" id="view-skills"><div class="page-head"><div><p class="eyebrow">KNOWLEDGE / SKILLS</p><h1>مكتبة المهارات</h1><p>ابحث في المهارات الفعلية المضمّنة في المستودع.</p></div><span class="pill" id="skill-count">جارٍ التحميل…</span></div><div class="panel"><input id="skill-search" class="search" placeholder="ابحث بالعربية أو الإنجليزية: Flet, GitHub, Security…"><div id="skill-results" class="skill-list"><p class="muted">يتم تحميل مكتبة المهارات…</p></div></div></section>
-<section class="view" id="view-assistant"><div class="page-head"><div><p class="eyebrow">AI / ASSISTANT</p><h1>مساعد AI البرمجي</h1><p>أرسل سؤالك إلى Gemini بموافقتك الصريحة.</p></div></div><div class="panel assistant"><div class="warning">للتجربة فقط: مفتاح API يُرسل من المتصفح ويمكن كشفه عبر أدوات المطور. استخدم مفتاحاً مؤقتاً محدود الصلاحيات، ولا تستخدم مفتاحاً إنتاجياً.</div><label>Gemini API Key<input id="api-key" type="password" dir="ltr" placeholder="أدخل مفتاح الاختبار"></label><label>النموذج<input id="model" dir="ltr" value="gemini-2.5-flash"></label><label>سؤالك<textarea id="prompt" rows="5" placeholder="اشرح لي سبب هذا الخطأ…"></textarea></label><label class="check"><input type="checkbox" id="consent"> أوافق على إرسال السؤال ومراجع المهارات إلى Google.</label><button class="btn primary" id="ask-ai">إرسال السؤال</button><pre id="ai-result" class="ai-result">ستظهر الإجابة هنا.</pre></div></section>
-</section></main><footer>AI Python Studio · Browser Preview · لا يتم إرسال بياناتك إلا عند طلب ذلك صراحةً</footer>
+<header class="appbar">
+ <button class="icon-btn menu-btn" id="toggle-files" aria-label="إظهار الملفات">☰</button>
+ <div class="brand"><div class="logo">Py</div><div><b>AI Python Studio</b><small id="project-title">مشروعي · Python</small></div></div>
+ <div class="app-actions"><span class="save-state" id="save-state">● محفوظ</span><button class="icon-btn" id="save-file" title="حفظ">▣</button><button class="run-btn" id="check-code" title="فحص الكود">▶ <span>تشغيل</span></button></div>
+</header>
+<div class="workspace">
+ <aside class="file-sidebar" id="file-sidebar">
+  <div class="side-head"><b>ملفات المشروع</b><div><button class="mini-btn" id="new-file" title="ملف جديد">＋</button><button class="mini-btn" id="new-folder" title="مجلد جديد">▱</button></div></div>
+  <div class="project-root"><span>▾</span> 📁 <b>MyProject</b></div>
+  <div class="file-tree" id="file-tabs"></div>
+  <div class="sidebar-bottom"><span class="dot"></span> مساحة عمل محلية تجريبية</div>
+ </aside>
+ <main class="editor-area">
+  <div class="editor-topline"><div class="breadcrumbs">MyProject <span>›</span> <b id="current-file">main.py</b></div><div class="editor-tools"><button class="tool-btn" id="undo-edit" title="تراجع">↶</button><button class="tool-btn" id="redo-edit" title="إعادة">↷</button><button class="tool-btn" id="font-down" title="تصغير الخط">A−</button><button class="tool-btn" id="font-up" title="تكبير الخط">A+</button></div></div>
+  <div class="editor-toolbar"><span class="language-tag"><i></i> Python</span><span>UTF-8&nbsp; · &nbsp;مسافات: 4</span></div>
+  <div class="editor-wrap"><div class="line-gutter" id="line-gutter">1</div><textarea id="editor" spellcheck="false" autocapitalize="off" autocomplete="off" dir="ltr" aria-label="Python code editor"></textarea></div>
+  <div class="editor-status"><span id="editor-result">جاهز · ابدأ بكتابة كود Python</span><span>Ln 1, Col 1&nbsp; | &nbsp;Python 3</span></div>
+  <section class="bottom-panel">
+   <div class="bottom-tabs"><button class="bottom-tab active" data-panel="output">المخرجات</button><button class="bottom-tab" data-panel="terminal">الطرفية</button><button class="bottom-tab" data-panel="problems">المشكلات</button><span class="panel-spacer"></span><button class="tool-btn" id="collapse-output">⌄</button></div>
+   <div class="bottom-content" id="bottom-content"><div class="console-line"><span class="prompt">&gt;&gt;&gt;</span> مرحباً بك في AI Python Studio</div><div class="console-muted">معاينة الويب تعرض تصميم المحرر فقط؛ تشغيل Python والطرفية متاحان في تطبيق Android.</div></div>
+  </section>
+ </main>
+</div>
+<nav class="mobile-nav"><button class="active" data-mobile="editor">⌨<small>المحرر</small></button><button id="mobile-files">▤<small>الملفات</small></button><button data-view="skills">✧<small>المهارات</small></button><button data-view="assistant">✳<small>مساعد AI</small></button></nav>
+<section class="secondary-view" id="view-skills"><div class="secondary-head"><button class="back-editor">‹ العودة للمحرر</button><h1>مكتبة المهارات</h1><span class="pill" id="skill-count">جارٍ التحميل…</span></div><div class="secondary-card"><input id="skill-search" class="search" placeholder="ابحث بالعربية أو الإنجليزية: Flet, GitHub, Security…"><div id="skill-results" class="skill-list"><p class="muted">يتم تحميل مكتبة المهارات…</p></div></div></section>
+<section class="secondary-view" id="view-assistant"><div class="secondary-head"><button class="back-editor">‹ العودة للمحرر</button><h1>مساعد AI البرمجي</h1></div><div class="secondary-card assistant"><div class="warning">للتجربة فقط: مفتاح API يُرسل من المتصفح ويمكن كشفه. لا تستخدم مفتاحاً إنتاجياً.</div><label>Gemini API Key<input id="api-key" type="password" dir="ltr" placeholder="أدخل مفتاح الاختبار"></label><label>النموذج<input id="model" dir="ltr" value="gemini-2.5-flash"></label><label>سؤالك<textarea id="prompt" rows="5" placeholder="اشرح لي سبب هذا الخطأ…"></textarea></label><label class="check"><input type="checkbox" id="consent"> أوافق على إرسال السؤال ومراجع المهارات إلى Google.</label><button class="btn primary" id="ask-ai">إرسال السؤال</button><pre id="ai-result" class="ai-result">ستظهر الإجابة هنا.</pre></div></section>
+<footer>AI Python Studio · تصميم مستوحى من بيئات تطوير Python على Android</footer>
 <script src="./app.js" defer></script>
 </body></html>
