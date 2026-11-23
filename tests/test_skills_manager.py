@@ -37,6 +37,19 @@ class SkillsManagerTests(unittest.TestCase):
         self.assertIn("github-actions-ci-debugging", names)
         self.assertIn("python-ide-runtime", names)
         self.assertIn("regression-testing", names)
+        self.assertIn("security-and-hardening", names)
+        self.assertIn("performance-optimization", names)
+        self.assertIn("frontend-ui-engineering", names)
+
+    def test_security_search_finds_hardening_skill(self):
+        matches = self.manager.search("أمان حماية مفاتيح API", limit=5)
+        self.assertTrue(matches)
+        self.assertEqual(matches[0].name, "security-and-hardening")
+
+    def test_flet_ui_search_finds_rtl_skill(self):
+        matches = self.manager.search("Flet واجهة عربية RTL أندرويد", limit=5)
+        self.assertTrue(matches)
+        self.assertEqual(matches[0].name, "frontend-ui-engineering")
 
     def test_flet_search_prioritises_flet_skill(self):
         matches = self.manager.search("Flet Android APK mobile editor", limit=5)
