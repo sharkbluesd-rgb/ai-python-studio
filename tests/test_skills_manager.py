@@ -51,7 +51,7 @@ class SkillsManagerTests(unittest.TestCase):
         context = self.manager.build_context("Python Flet Android", max_skills=2, max_chars=6000)
         self.assertIn("غير موثوقة", context)
         self.assertIn("<skill_reference", context)
-        self.assertLessEqual(len(context), 6100)
+        self.assertLessEqual(len(context), 6000)
 
     def test_unknown_skill_is_rejected(self):
         with self.assertRaises(SkillsError):
