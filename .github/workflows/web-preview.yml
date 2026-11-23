@@ -26,6 +26,8 @@ jobs:
   build:
     name: Build browser preview with bundled CodeEditor extension
     runs-on: ubuntu-latest
+    outputs:
+      pages_enabled: ${{ steps.configure_pages.outcome == 'success' }}
     permissions:
       contents: read
       pages: write
@@ -123,6 +125,7 @@ jobs:
           echo "Repository owner: enable Settings > Pages > Build and deployment > Source: GitHub Actions, then rerun this workflow."
 
       - name: Upload Pages deployment artifact
+        if: steps.configure_pages.outcome == 'success'
         uses: actions/upload-pages-artifact@v4
         with:
           path: ${{ github.workspace }}/build/web
@@ -130,7 +133,7 @@ jobs:
 
   deploy:
     name: Publish browser preview
-    if: github.ref == 'refs/heads/feature/studio-2.0'
+    if: github.ref == 'refs/heads/feature/studio-2.0' && needs.build.outputs.pages_enabled == 'true'
     needs: build
     runs-on: ubuntu-latest
     permissions:

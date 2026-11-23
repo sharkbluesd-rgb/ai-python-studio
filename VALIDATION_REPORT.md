@@ -93,3 +93,19 @@ Still required before calling this release fully verified:
 - Job-log ZIP extraction now limits the number of text entries, per-entry decompressed size and total decompressed size to reduce ZIP-bomb memory exhaustion.
 - Two regression tests cover excessive log entry count and oversized uncompressed log members.
 - The app version label is synchronized with the 1.2.0 package/workflow version.
+
+
+## Browser preview validation — 2026-11-23
+
+- Repository: `sharkbluesd-rgb/ai-python-studio`
+- Branch: `feature/studio-2.0`
+- Web preview workflow run #10: build job completed successfully.
+- Python compile check: passed.
+- Browser-preview unit tests: passed.
+- Flet static web build: passed.
+- The build step verified that the `flet_code_editor` Python package was included in the generated Flet app archive.
+- Browser preview artifact: `ai-python-studio-web-preview`, artifact ID `14796892027`, size 4,810,756 bytes, SHA-256 `e40890c1e68087c553cad9462e090c26ee460907635e31408c1e48a131f6c729`.
+- GitHub Pages deployment did not complete: the connected GitHub integration received `Resource not accessible by integration` while attempting to create the Pages site, and the deploy job received HTTP 404 because Pages is not enabled for this repository.
+- Workflow correction: deployment now runs only when the Pages configuration step succeeds; otherwise the successful preview artifact remains available and the workflow reports the required repository setting.
+- Scope: this preview is a deliberately limited browser-only editor/syntax-check demonstration. It does not validate Android runtime, device storage, package installation, local script execution, GitHub OAuth, or APK build functions.
+- Remaining manual prerequisite for a public live URL: a repository administrator must enable GitHub Pages with GitHub Actions as the source, then rerun the web-preview workflow.
