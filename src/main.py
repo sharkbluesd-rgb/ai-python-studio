@@ -1037,6 +1037,30 @@ def _build_main(page: ft.Page) -> None:
             set_status(str(exc), DANGER)
         page.update()
 
+    # The code viewport follows the available device height and reacts to
+    # rotation, window resizing and Android keyboard/safe-area changes.
+    editor_frame = ft.Container(
+        content=editor,
+        bgcolor=EDITOR_BG,
+        border=ft.Border.all(1, "#2A3B55"),
+        border_radius=13,
+        padding=3,
+        rtl=False,
+        height=max(300, min(620, (page.height or 800) * 0.56)),
+    )
+
+    def update_editor_viewport(e=None) -> None:
+        available_height = page.height or 800
+        keyboard_inset = getattr(page.media.view_insets, "bottom", 0) if page.media else 0
+        editor_frame.height = max(
+            280,
+            min(620, (available_height - min(keyboard_inset, available_height * 0.45)) * 0.56),
+        )
+        page.update()
+
+    page.on_resize = update_editor_viewport
+    page.on_media_change = update_editor_viewport
+
     editor.on_change = on_editor_change
     run_button.on_click = run_code
     test_button.on_click = run_project_tests
@@ -1616,14 +1640,7 @@ def _build_main(page: ft.Page) -> None:
                     bgcolor="#0D1725",
                     border_radius=10,
                 ),
-                ft.Container(
-                    content=editor,
-                    bgcolor=EDITOR_BG,
-                    border=ft.Border.all(1, "#2A3B55"),
-                    border_radius=13,
-                    padding=3,
-                    height=560,
-                ),
+                editor_frame,
                 ft.Row(
                     controls=[
                         ft.Button(content="طي الاستيرادات", on_click=fold_imports),
@@ -1646,7 +1663,7 @@ def _build_main(page: ft.Page) -> None:
                 ),
                 ft.Container(
                     content=tree_view,
-                    height=220,
+                    max_height=240,
                     bgcolor="#0A1320",
                     border=ft.Border.all(1, "#26364D"),
                     border_radius=12,
@@ -2255,6 +2272,7 @@ def _build_main(page: ft.Page) -> None:
     page.clean()
     page.add(
         ft.SafeArea(
+            rtl=True,
             content=ft.Column(
                 controls=[header, screen_host, status_bar, nav_bar],
                 spacing=0,
