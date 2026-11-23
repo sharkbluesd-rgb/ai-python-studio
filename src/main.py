@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import shlex
 import time
+import traceback
 from pathlib import Path, PurePosixPath
 
 import flet as ft
@@ -58,7 +59,7 @@ AUTOCOMPLETE_WORDS = [
 ]
 
 
-def main(page: ft.Page) -> None:
+def _build_main(page: ft.Page) -> None:
     store = WorkspaceStore()
 
     page.title = "AI Python Studio"
@@ -1845,6 +1846,72 @@ def main(page: ft.Page) -> None:
     refresh_file_buttons()
     refresh_project_summary()
     show_screen("editor")
+
+
+def main(page: ft.Page) -> None:
+    """Launch the workspace and render a useful diagnostic instead of a blank page."""
+    print("[AI Python Studio] Starting application UI.", flush=True)
+    try:
+        _build_main(page)
+    except Exception as exc:
+        details = traceback.format_exc()
+        print("[AI Python Studio] Startup failure:\\n" + details, flush=True)
+        try:
+            page.clean()
+            page.title = "AI Python Studio - Startup Error"
+            page.bgcolor = APP_BG
+            page.padding = 0
+            page.add(
+                ft.Container(
+                    expand=True,
+                    bgcolor=APP_BG,
+                    padding=20,
+                    content=ft.Column(
+                        controls=[
+                            ft.Text(
+                                "تعذّر تشغيل AI Python Studio",
+                                size=21,
+                                weight=ft.FontWeight.BOLD,
+                                color=DANGER,
+                            ),
+                            ft.Text(
+                                str(exc) or type(exc).__name__,
+                                size=14,
+                                color=TEXT,
+                                selectable=True,
+                            ),
+                            ft.Text(
+                                "تفاصيل الخطأ — أرسل هذه الرسالة لفريق التطوير:",
+                                size=12,
+                                color=MUTED,
+                            ),
+                            ft.Container(
+                                expand=True,
+                                bgcolor="#050A12",
+                                border=ft.Border.all(1, "#26354C"),
+                                border_radius=12,
+                                padding=12,
+                                content=ft.Text(
+                                    details[-10000:],
+                                    size=10,
+                                    color="#F2C6CC",
+                                    selectable=True,
+                                ),
+                            ),
+                        ],
+                        spacing=12,
+                        expand=True,
+                        scroll=ft.ScrollMode.AUTO,
+                    ),
+                )
+            )
+            page.update()
+        except Exception as render_error:
+            print(
+                "[AI Python Studio] Could not render startup diagnostic: "
+                + repr(render_error),
+                flush=True,
+            )
 
 
 if __name__ == "__main__":

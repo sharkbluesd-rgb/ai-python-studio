@@ -21,3 +21,16 @@ target_arch = ["arm64-v8a"]
 
 [dependency-groups]
 dev = ["flet-cli==1.1.2"]
+
+[tool.flet.boot_screen]
+name = "flet"
+
+[tool.flet.boot_screen.flet]
+theme_mode = "dark"
+bgcolor_dark = "#080D16"
+spinner_color_dark = "#8175F5"
+spinner_size = 34
+text_color_dark = "#F2F4FC"
+prepare_message = "جارٍ تجهيز AI Python Studio لأول تشغيل..."
+startup_message = "جارٍ تشغيل محرر Python..."
+fade_out_duration = 250
