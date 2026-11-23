@@ -25,6 +25,27 @@ class SkillsManagerTests(unittest.TestCase):
     def setUp(self):
         self.manager = SkillsManager()
 
+    def test_select_skills_prefers_category_diversity(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            fixtures = {
+                "security/one/SKILL.md": "---\\nname: security-one\\ndescription: security review\\n---\\nSecurity guidance",
+                "security/two/SKILL.md": "---\\nname: security-two\\ndescription: security audit\\n---\\nAudit guidance",
+                "testing/three/SKILL.md": "---\\nname: testing-three\\ndescription: security testing\\n---\\nTesting guidance",
+            }
+            for relative, text in fixtures.items():
+                path = root / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(text, encoding="utf-8")
+            manager = SkillsManager(root)
+            selected = manager.select_skills("security", max_skills=2)
+            self.assertEqual(len(selected), 2)
+            self.assertEqual({item.category for item in selected}, {"security", "testing"})
+
+    def test_select_skills_rejects_invalid_limit(self):
+        with self.assertRaises(SkillsError):
+            self.manager.select_skills("Python", max_skills=0)
+
     def test_bundled_catalog_contains_core_skills(self):
         names = {item.name for item in self.manager.list_skills()}
         self.assertIn("flet-mobile-development", names)
