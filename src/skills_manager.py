@@ -33,6 +33,9 @@ SKILL_LABELS_AR = {
     "mobile-browser-debugging": "تصحيح المتصفح على الهاتف",
     "android-python-packaging": "توافق مكتبات Python مع Android",
     "flet-mobile-ux-accessibility": "تصميم واجهات Flet للهاتف وإمكانية الوصول",
+    "github-actions-ci-debugging": "تشخيص GitHub Actions والبناء السحابي",
+    "python-ide-runtime": "هندسة بيئة تشغيل محرر Python",
+    "regression-testing": "اختبارات الانحدار والجودة",
 }
 
 SKILL_ARABIC_TERMS = {
@@ -53,6 +56,9 @@ SKILL_ARABIC_TERMS = {
     "mobile-browser-debugging": "متصفح الهاتف console devtools javascript network cache responsive viewport webview",
     "android-python-packaging": "Android APK Python dependencies wheels ABI arm64 binary packages Flet build",
     "flet-mobile-ux-accessibility": "Flet واجهة هاتف responsive touch RTL accessibility mobile layout keyboard",
+    "github-actions-ci-debugging": "GitHub Actions workflow CI logs jobs permissions artifacts failures build APK",
+    "python-ide-runtime": "محرر Python IDE runtime execution terminal packages cancellation sandbox filesystem",
+    "regression-testing": "اختبارات انحدار تكامل smoke test regression browser UI test quality",
 }
 
 

@@ -34,9 +34,12 @@ class SkillsManagerTests(unittest.TestCase):
         self.assertIn("flet-web-runtime-debugging", names)
         self.assertIn("github-pages-deployment", names)
         self.assertIn("android-python-packaging", names)
+        self.assertIn("github-actions-ci-debugging", names)
+        self.assertIn("python-ide-runtime", names)
+        self.assertIn("regression-testing", names)
 
     def test_flet_search_prioritises_flet_skill(self):
-        matches = self.manager.search("Flet Android APK web editor", limit=5)
+        matches = self.manager.search("Flet Android APK mobile editor", limit=5)
         self.assertTrue(matches)
         self.assertEqual(matches[0].name, "flet-mobile-development")
 
