@@ -1,4 +1,7 @@
 import unittest
+import inspect
+
+import web_preview
 
 from web_preview import (
     build_skill_context,
@@ -31,6 +34,11 @@ CATALOG = [
 
 
 class WebPreviewValidationTests(unittest.TestCase):
+    def test_browser_preview_avoids_custom_flutter_editor_extension(self):
+        source = inspect.getsource(web_preview)
+        self.assertNotIn("import flet_code_editor", source)
+        self.assertIn("editor = ft.TextField(", source)
+
     def test_arabic_web_theme_loads_font_for_light_and_dark_modes(self):
         class FakePage:
             pass
