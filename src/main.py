@@ -597,8 +597,7 @@ def _build_main(page: ft.Page) -> None:
             save_current_file()
         except WorkspaceError as exc:
             output_text.value = str(exc)
-            output_text.color = DANGER
-            set_status("تعذر حفظ الملف قبل الاختبارات.", DANGER)
+            output_text.color = DANGER            set_status("تعذر حفظ الملف قبل الاختبارات.", DANGER)
             page.update()
             return
 
@@ -1197,8 +1196,7 @@ def _build_main(page: ft.Page) -> None:
             return
         try:
             token = await asyncio.to_thread(
-                GitHubClient.poll_device_authorization, github_state["client_id"], auth
-            )
+                GitHubClient.poll_device_authorization, github_state["client_id"], auth            )
             if not token:
                 github_status.value = "لم تتم الموافقة بعد. أكمل الخطوات في GitHub ثم أعد المحاولة."
                 github_status.color = ACCENT
@@ -1797,8 +1795,7 @@ def _build_main(page: ft.Page) -> None:
 
     def refresh_skills_catalog(query: str = "") -> None:
         try:
-            items = skills_manager.search(query, limit=60)
-            skills_catalog.controls = []
+            items = skills_manager.search(query, limit=60)            skills_catalog.controls = []
             for item in items:
                 skills_catalog.controls.append(
                     ft.Container(
@@ -2097,15 +2094,13 @@ def _build_main(page: ft.Page) -> None:
 
     screen_host = ft.Container(content=screens["editor"], expand=True, padding=12)
     nav_buttons = {}
+    # Keep the primary mobile navigation focused; secondary tools live under "More".
     navigation_items = [
         ("projects", "▦", "المشاريع"),
         ("editor", "⌨", "المحرر"),
         ("tools", "⌕", "الأدوات"),
-        ("packages", "◇", "الحزم"),
-        ("terminal", "▤", "النتائج"),
-        ("github", "◈", "GitHub"),
-        ("skills", "✧", "المهارات"),
-        ("assistant", "✦", "مساعد AI"),
+        ("terminal", "▤", "الطرفية"),
+        ("more", "⋯", "المزيد"),
     ]
     active_screen = {"name": "editor"}
 
@@ -2119,6 +2114,71 @@ def _build_main(page: ft.Page) -> None:
             button.bgcolor = "#302D59" if selected else "#121C2A"
             button.color = "#E3DFFF" if selected else MUTED
         page.update()
+
+    # Secondary destinations remain first-class screens, but are grouped to
+    # prevent eight cramped touch targets on narrow Android displays.
+    screens["more"] = ft.Column(
+        controls=[
+            make_panel(
+                ft.Column(
+                    controls=[
+                        section_heading("المزيد من الأدوات", "كل أدوات بيئة التطوير في مكان واحد"),
+                        ft.Text(
+                            "اختر القسم الذي تريد فتحه. ستبقى حالة المحرر والمشروع محفوظة عند التنقل.",
+                            size=11, color=MUTED,
+                        ),
+                        ft.Row(
+                            controls=[
+                                ft.Button(
+                                    content="مدير الحزم",
+                                    on_click=lambda e: show_screen("packages"),
+                                    bgcolor="#202A3A", color=TEXT,
+                                ),
+                                ft.Button(
+                                    content="GitHub والبناء",
+                                    on_click=lambda e: show_screen("github"),
+                                    bgcolor="#202A3A", color=TEXT,
+                                ),
+                            ],
+                            wrap=True, spacing=8,
+                        ),
+                        ft.Row(
+                            controls=[
+                                ft.Button(
+                                    content="مكتبة المهارات",
+                                    on_click=lambda e: show_screen("skills"),
+                                    bgcolor="#202A3A", color=TEXT,
+                                ),
+                                ft.Button(
+                                    content="مساعد AI",
+                                    on_click=lambda e: show_screen("assistant"),
+                                    bgcolor=ACCENT, color="white",
+                                ),
+                            ],
+                            wrap=True, spacing=8,
+                        ),
+                    ],
+                    spacing=12,
+                )
+            ),
+            make_panel(
+                ft.Column(
+                    controls=[
+                        section_heading("حالة مساحة العمل", "معلومات سريعة عن المشروع الحالي"),
+                        project_summary,
+                        ft.Text(
+                            "تذكير: تشغيل أكواد Python محلياً ليس بيئة معزولة. شغّل الأكواد التي تثق بها فقط.",
+                            size=10, color="#DDBB78",
+                        ),
+                    ],
+                    spacing=9,
+                )
+            ),
+        ],
+        spacing=12,
+        scroll=ft.ScrollMode.AUTO,
+        expand=True,
+    )
 
     nav_cells = []
     for key, symbol, label in navigation_items:
@@ -2137,10 +2197,15 @@ def _build_main(page: ft.Page) -> None:
             expand=True,
         )
         nav_buttons[key] = button
-        nav_cells.append(ft.Container(content=button, expand=1))
+        nav_cells.append(ft.Container(content=button, expand=1, padding=2))
 
     nav_bar = ft.Container(
-        content=ft.Row(controls=nav_cells, spacing=5),
+        content=ft.Row(
+            controls=nav_cells,
+            spacing=7,
+            alignment=ft.MainAxisAlignment.SPACE_AROUND,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
         padding=ft.Padding.only(left=9, right=9, top=8, bottom=8),
         bgcolor="#0E1623",
         border=ft.Border.only(top=ft.BorderSide(1, "#243147")),
