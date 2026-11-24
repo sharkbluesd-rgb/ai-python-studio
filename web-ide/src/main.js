@@ -1,8 +1,9 @@
 import { basicSetup, EditorView } from "codemirror";
 import { python, globalCompletion, localCompletionSource } from "@codemirror/lang-python";
 import { autocompletion } from "@codemirror/autocomplete";
-import { indentWithTab } from "@codemirror/commands";
-import { keymap, Compartment } from "@codemirror/view";
+import { indentWithTab, undo, redo } from "@codemirror/commands";
+import { Compartment } from "@codemirror/state";
+import { keymap } from "@codemirror/view";
 import { openSearchPanel } from "@codemirror/search";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { zipSync, unzipSync, strFromU8, strToU8 } from "fflate";
@@ -153,6 +154,7 @@ function closeTab(path) {
   const index = state.openTabs.indexOf(path);
   if (index < 0) return;
   state.openTabs.splice(index, 1);
+  if (state.openTabs.length === 0) { state.openTabs.push(path); renderTabs(); return; }
   if (state.currentPath === path) {
     if (state.openTabs.length) openFile(state.openTabs[Math.max(0, index - 1)]);
     else {
@@ -292,6 +294,40 @@ async function renameCurrentFile() {
   state.currentPath = safe;
   await saveNow();
   renderFiles(); renderTabs(); updateFileHeading();
+}
+async function duplicateCurrentFile() {
+  if (!state.currentPath) return;
+  const suggested = state.currentPath.replace(/(\\.[^./]+)?$/, "_copy$1");
+  const target = prompt("مسار النسخة الجديدة:", suggested);
+  if (!target) return;
+  const safe = validateTextFile(target, editorView.state.doc.toString());
+  if (Object.hasOwn(state.project.files, safe)) throw new Error("المسار مستخدم بالفعل.");
+  state.project.files[safe] = editorView.state.doc.toString();
+  await saveNow();
+  renderFiles();
+  openFile(safe);
+}
+async function renameProjectAction() {
+  const name = prompt("اسم المشروع:", state.project.name);
+  if (!name || name === state.project.name) return;
+  state.project = await renameProject(state.project.id, name);
+  updateFileHeading();
+  await refreshProjectList();
+  toast("تم تغيير اسم المشروع.", "success");
+}
+async function deleteProjectAction() {
+  if (!confirm("حذف المشروع «" + state.project.name + "» وجميع ملفاته من هذا المتصفح؟")) return;
+  await deleteProject(state.project.id);
+  const remaining = await listProjects();
+  state.project = remaining[0] || await createProject("مشروعي الأول");
+  state.currentPath = Object.keys(state.project.files)[0] || "main.py";
+  state.openTabs = [state.currentPath];
+  editorView.dispatch({ changes: { from: 0, to: editorView.state.doc.length, insert: state.project.files[state.currentPath] || "" } });
+  await refreshProjectList();
+  updateFileHeading();
+  renderFiles();
+  renderTabs();
+  toast("تم حذف المشروع.", "success");
 }
 async function deleteCurrentFile() {
   if (!state.currentPath) return;
@@ -535,17 +571,33 @@ function insertAtCursor(value) {
   editorView.focus();
 }
 function handleProgrammerKey(key) {
-  if (key === "CTRL") { state.virtualCtrl = !state.virtualCtrl; toast(state.virtualCtrl ? "Ctrl مفعّل للاختصار التالي" : "Ctrl غير مفعّل"); return; }
-  if (key === "SHIFT") { state.virtualShift = !state.virtualShift; toast(state.virtualShift ? "Shift مفعّل" : "Shift غير مفعّل"); return; }
+  if (key === "CTRL") {
+    state.virtualCtrl = !state.virtualCtrl;
+    document.querySelector('[data-key="CTRL"]').classList.toggle("modifier-active", state.virtualCtrl);
+    return;
+  }
+  if (key === "SHIFT") {
+    state.virtualShift = !state.virtualShift;
+    document.querySelector('[data-key="SHIFT"]').classList.toggle("modifier-active", state.virtualShift);
+    return;
+  }
   if (key === "ESC") { runtime.stop(); return; }
   if (state.virtualCtrl) {
     state.virtualCtrl = false;
+    document.querySelector('[data-key="CTRL"]').classList.remove("modifier-active");
     const shortcut = key.toLowerCase();
+    const selection = editorView.state.selection.main;
     if (shortcut === "s") saveNow();
     else if (shortcut === "f") openSearchPanel(editorView);
     else if (shortcut === "a") editorView.dispatch({ selection: { anchor: 0, head: editorView.state.doc.length } });
-    else if (shortcut === "z") editorView.execCommand?.("undo");
-    else toast("الاختصار غير مدعوم من لوحة المفاتيح المصغرة.");
+    else if (shortcut === "z") undo(editorView);
+    else if (shortcut === "y") redo(editorView);
+    else if (shortcut === "c" || shortcut === "x") {
+      navigator.clipboard?.writeText(editorView.state.sliceDoc(selection.from, selection.to)).catch(() => toast("تعذر الوصول إلى الحافظة."));
+      if (shortcut === "x" && !selection.empty) editorView.dispatch({ changes: { from: selection.from, to: selection.to, insert: "" } });
+    } else if (shortcut === "v") {
+      navigator.clipboard?.readText().then((text) => insertAtCursor(text)).catch(() => toast("تعذر قراءة الحافظة."));
+    } else toast("اختصار غير مدعوم.");
     editorView.focus();
     return;
   }
@@ -560,13 +612,19 @@ function handleProgrammerKey(key) {
       const targetLine = editorView.state.doc.line(targetNumber);
       position = Math.min(targetLine.to, targetLine.from + head - line.from);
     }
-    editorView.dispatch({ selection: { anchor: Math.max(0, Math.min(editorView.state.doc.length, position)) } });
+    const nextPosition = Math.max(0, Math.min(editorView.state.doc.length, position));
+    const current = editorView.state.selection.main;
+    editorView.dispatch({ selection: state.virtualShift ? { anchor: current.anchor, head: nextPosition } : { anchor: nextPosition } });
+    state.virtualShift = false;
+    document.querySelector('[data-key="SHIFT"]').classList.remove("modifier-active");
     editorView.focus();
     return;
   }
   if (key === "TAB" || key === "INDENT") insertAtCursor("    ");
   else if (key === "ENTER") insertAtCursor("\n");
-  else insertAtCursor(key);
+  else insertAtCursor(state.virtualShift ? key.toUpperCase() : key);
+  state.virtualShift = false;
+  document.querySelector('[data-key="SHIFT"]').classList.remove("modifier-active");
 }
 function goToLine() {
   const number = Number(prompt("اذهب إلى رقم السطر:"));
@@ -590,6 +648,11 @@ function bindEvents() {
   $("sidebar-close").addEventListener("click", closeSidebarOnMobile);
   $("mobile-scrim").addEventListener("click", closeSidebarOnMobile);
   $("new-project").addEventListener("click", () => newProject().catch((error) => toast(error.message, "error")));
+  $("rename-project").addEventListener("click", () => renameProjectAction().catch((error) => toast(error.message, "error")));
+  $("delete-project").addEventListener("click", () => deleteProjectAction().catch((error) => toast(error.message, "error")));
+  $("rename-file").addEventListener("click", () => renameCurrentFile().catch((error) => toast(error.message, "error")));
+  $("duplicate-file").addEventListener("click", () => duplicateCurrentFile().catch((error) => toast(error.message, "error")));
+  $("delete-file").addEventListener("click", () => deleteCurrentFile().catch((error) => toast(error.message, "error")));
   $("project-select").addEventListener("change", (event) => switchProject(event.target.value).catch((error) => toast(error.message, "error")));
   $("new-file").addEventListener("click", () => newFile().catch((error) => toast(error.message, "error")));
   $("new-folder").addEventListener("click", () => newFolder().catch((error) => toast(error.message, "error")));
