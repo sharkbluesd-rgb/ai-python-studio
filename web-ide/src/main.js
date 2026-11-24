@@ -1,7 +1,7 @@
 import { basicSetup, EditorView } from "codemirror";
 import { python, globalCompletion, localCompletionSource } from "@codemirror/lang-python";
 import { autocompletion } from "@codemirror/autocomplete";
-import { indentWithTab, undo, redo } from "@codemirror/commands";
+import { indentWithTab, undo, redo, insertNewlineAndIndent } from "@codemirror/commands";
 import { Compartment } from "@codemirror/state";
 import { keymap } from "@codemirror/view";
 import { openSearchPanel } from "@codemirror/search";
@@ -621,7 +621,7 @@ function handleProgrammerKey(key) {
     return;
   }
   if (key === "TAB" || key === "INDENT") insertAtCursor("    ");
-  else if (key === "ENTER") insertAtCursor("\n");
+  else if (key === "ENTER") insertNewlineAndIndent(editorView);
   else insertAtCursor(state.virtualShift ? key.toUpperCase() : key);
   state.virtualShift = false;
   document.querySelector('[data-key="SHIFT"]').classList.remove("modifier-active");
