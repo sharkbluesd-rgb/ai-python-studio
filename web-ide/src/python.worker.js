@@ -8,8 +8,24 @@ let pendingInput = new Uint8Array(0);
 let pendingOffset = 0;
 let inputEnabled = false;
 let activeRunId = null;
+let outputChars = 0;
+let outputTruncated = false;
+const MAX_OUTPUT_CHARS_PER_RUN = 250000;
 
 function send(type, payload = {}) { self.postMessage({ type, ...payload }); }
+function sendLimitedOutput(type, text) {
+  const value = String(text);
+  const remaining = Math.max(0, MAX_OUTPUT_CHARS_PER_RUN - outputChars);
+  if (remaining > 0) {
+    const chunk = value.slice(0, remaining);
+    if (chunk) send(type, { text: chunk });
+    outputChars += chunk.length;
+  }
+  if (value.length > remaining && !outputTruncated) {
+    outputTruncated = true;
+    send(type, { text: "\\n[تم اختصار مخرجات Python بعد بلوغ الحد الآمن]\\n" });
+  }
+}
 
 function setProjectFiles(files, activeFile) {
   const root = "/home/pyodide/project";
@@ -134,8 +150,8 @@ async function initialize(message) {
   pyodide = await loadPyodide({
     indexURL: new URL("pyodide/", message.baseUrl).href,
     packageBaseUrl: "https://cdn.jsdelivr.net/pyodide/v" + pyodideVersion + "/full/",
-    stdout: (text) => send("stdout", { text }),
-    stderr: (text) => send("stderr", { text }),
+    stdout: (text) => sendLimitedOutput("stdout", text),
+    stderr: (text) => sendLimitedOutput("stderr", text),
   });
   configureInput(message.shared);
   send("ready", { version: pyodide.version || pyodideVersion, inputSupported: inputEnabled, interruptSupported: Boolean(interruptView) });
@@ -143,6 +159,8 @@ async function initialize(message) {
 
 async function execute(message) {
   activeRunId = message.id;
+  outputChars = 0;
+  outputTruncated = false;
   const start = performance.now();
   let success = true;
   let errorText = "";
