@@ -5,6 +5,9 @@ description = "Mobile-first builder for Python Flet Android APKs"
 requires-python = ">=3.10"
 dependencies = [
     "flet==1.1.2",
+    "fastapi>=0.115,<1",
+    "uvicorn[standard]>=0.30,<1",
+    "python-multipart>=0.0.9",
 ]
 
 [tool.flet]
