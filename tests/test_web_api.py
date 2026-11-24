@@ -45,6 +45,7 @@ class WebApiSecurityTests(unittest.TestCase):
                         created = client.post("/api/session")
                         self.assertEqual(created.status_code, 200)
                         csrf = created.json()["csrf_token"]
+                        self.assertIsInstance(created.json()["expires_in"], int)
                         session = client.get("/api/session")
                         self.assertEqual(session.status_code, 200)
                         self.assertEqual(session.json()["csrf_token"], csrf)
