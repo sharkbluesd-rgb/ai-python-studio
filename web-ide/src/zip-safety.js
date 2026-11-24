@@ -64,6 +64,7 @@ export function inspectZipArchive(input) {
   const decoder = new TextDecoder("utf-8", { fatal: true });
   const entries = [];
   const names = new Set();
+  const parsedEntries = [];
   let totalUncompressed = 0;
   let cursor = centralOffset;
 
@@ -139,13 +140,26 @@ export function inspectZipArchive(input) {
     if (readU32(view, localOffset) !== LOCAL_SIGNATURE) {
       throw new Error("رأس ملف ZIP المحلي غير صالح: " + safePath);
     }
+    const localFlags = readU16(view, localOffset + 6);
+    const localMethod = readU16(view, localOffset + 8);
     const localNameLength = readU16(view, localOffset + 26);
     const localExtraLength = readU16(view, localOffset + 28);
-    const dataOffset = localOffset + 30 + localNameLength + localExtraLength;
-    if (dataOffset + compressedSize > centralOffset) {
+    const localNameStart = localOffset + 30;
+    const localNameEnd = localNameStart + localNameLength;
+    const dataOffset = localNameEnd + localExtraLength;
+    if (localFlags !== flags || localMethod !== compressionMethod || localNameLength !== nameLength) {
+      throw new Error("رأس الملف المحلي لا يطابق دليل ZIP: " + safePath);
+    }
+    if (localNameEnd > centralOffset || dataOffset + compressedSize > centralOffset) {
       throw new Error("حدود بيانات ZIP غير صالحة: " + safePath);
     }
+    for (let nameIndex = 0; nameIndex < nameLength; nameIndex += 1) {
+      if (bytes[localNameStart + nameIndex] !== nameBytes[nameIndex]) {
+        throw new Error("اسم الملف المحلي لا يطابق دليل ZIP: " + safePath);
+      }
+    }
 
+    parsedEntries.push({ path: safePath, isDirectory, compressedSize, uncompressedSize });
     if (!safePath.startsWith("__MACOSX/") && safePath !== "__MACOSX") {
       entries.push({ path: safePath, isDirectory, compressedSize, uncompressedSize });
     }
@@ -153,5 +167,16 @@ export function inspectZipArchive(input) {
   }
 
   if (cursor !== centralEnd) throw new Error("دليل ZIP يحتوي على بيانات غير مفهومة.");
+
+  const regularFiles = new Set(parsedEntries.filter((entry) => !entry.isDirectory).map((entry) => entry.path));
+  for (const entry of parsedEntries) {
+    const parts = entry.path.split("/");
+    for (let index = 1; index < parts.length; index += 1) {
+      const parent = parts.slice(0, index).join("/");
+      if (regularFiles.has(parent)) {
+        throw new Error("تعارض في بنية ZIP: الملف " + parent + " مستخدم كمجلد أيضاً.");
+      }
+    }
+  }
   return entries;
 }
