@@ -53,13 +53,17 @@ export class PyodideRuntimeAdapter {
       this.worker.onerror = (event) => {
         clearTimeout(timeout);
         const error = new Error(event.message || "تعطل عامل تشغيل Python.");
+        const failedWorker = this.worker;
+        this.worker = null;
         this.ready = false;
         this.running = false;
+        this.readyPromise = null;
         if (this.pendingPackage) {
           clearTimeout(this.pendingPackage.timer);
           this.pendingPackage.reject(error);
           this.pendingPackage = null;
         }
+        failedWorker?.terminate();
         reject(error);
         this.onMessage({ type: "runtime-error", message: error.message });
       };
@@ -89,8 +93,16 @@ export class PyodideRuntimeAdapter {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         if (this.pendingPackage?.id === id) {
+          const error = new Error("انتهت مهلة تثبيت المكتبة. أُعيد تشغيل بيئة Python لإيقاف العملية المعلّقة.");
+          const stalledWorker = this.worker;
           this.pendingPackage = null;
-          reject(new Error("انتهت مهلة تثبيت المكتبة. تحقق من الاتصال وحاول مجدداً."));
+          this.worker = null;
+          this.ready = false;
+          this.running = false;
+          this.readyPromise = null;
+          stalledWorker?.terminate();
+          reject(error);
+          this.onMessage({ type: "worker-terminated", text: error.message });
         }
       }, 300000);
       this.pendingPackage = { id, resolve, reject, timer };
