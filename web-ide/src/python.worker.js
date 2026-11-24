@@ -23,7 +23,7 @@ function sendLimitedOutput(type, text) {
   }
   if (value.length > remaining && !outputTruncated) {
     outputTruncated = true;
-    send(type, { text: "\\n[تم اختصار مخرجات Python بعد بلوغ الحد الآمن]\\n" });
+    send(type, { text: "\n[تم اختصار مخرجات Python بعد بلوغ الحد الآمن]\n" });
   }
 }
 
