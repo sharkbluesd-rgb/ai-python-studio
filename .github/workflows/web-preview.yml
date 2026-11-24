@@ -46,6 +46,12 @@ jobs:
         env:
           GITHUB_PAGES: "true"
         run: npm run build
+      - name: Install Chromium for browser runtime tests
+        working-directory: web-ide
+        run: npx playwright install --with-deps chromium
+      - name: Run real browser Python IDE smoke tests
+        working-directory: web-ide
+        run: npm run test:e2e
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
