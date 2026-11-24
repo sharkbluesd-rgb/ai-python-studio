@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0b1020">
+  <link rel="manifest" href="./manifest.webmanifest">
   <meta name="description" content="PYTHON STUDIO MOBILE — بيئة تطوير Python احترافية للهواتف">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -32,10 +33,13 @@
         </div>
         <div class="project-select-row">
           <select id="project-select" aria-label="المشروع الحالي"></select>
-          <button class="icon-button small" id="new-project" title="مشروع جديد">＋</button>
+          <button class="icon-button small" id="new-project" title="مشروع جديد">＋</button><button class="icon-button small" id="rename-project" title="إعادة تسمية المشروع">✎</button><button class="icon-button small" id="delete-project" title="حذف المشروع">⌫</button>
         </div>
         <div class="file-actions">
           <button id="new-file">＋ ملف</button><button id="new-folder">＋ مجلد</button><button id="import-files">استيراد</button>
+        </div>
+        <div class="file-actions secondary">
+          <button id="rename-file">إعادة تسمية</button><button id="duplicate-file">نسخ الملف</button><button id="delete-file">حذف الملف</button>
         </div>
         <div class="tree-title"><span>ملفات المشروع</span><span id="file-count">0</span></div>
         <nav class="file-list" id="file-list" aria-label="ملفات المشروع"></nav>
