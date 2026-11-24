@@ -1,0 +1,12 @@
+{
+  "name": "Python Studio Mobile",
+  "short_name": "Python Studio",
+  "description": "Mobile-first Python IDE running locally in your browser",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#080d18",
+  "theme_color": "#0b1020",
+  "orientation": "any",
+  "icons": []
+}
