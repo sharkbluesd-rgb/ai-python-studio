@@ -10,6 +10,7 @@ export class PyodideRuntimeAdapter {
     this.interruptBuffer = null;
     this.inputSupported = false;
     this.interruptSupported = false;
+    this.pendingPackage = null;
   }
   start() {
     if (this.ready) return Promise.resolve();
@@ -38,12 +39,29 @@ export class PyodideRuntimeAdapter {
         } else if (message.type === "init-failed") {
           clearTimeout(timeout);
           reject(new Error(message.message || "تعذر تحميل Pyodide."));
+        } else if (message.type === "package-installed" || message.type === "package-failed") {
+          if (this.pendingPackage && this.pendingPackage.id === message.id) {
+            clearTimeout(this.pendingPackage.timer);
+            const pending = this.pendingPackage;
+            this.pendingPackage = null;
+            if (message.type === "package-installed") pending.resolve(message);
+            else pending.reject(new Error(message.message || "فشل تثبيت المكتبة."));
+          }
         }
         this.onMessage(message);
       };
       this.worker.onerror = (event) => {
         clearTimeout(timeout);
-        reject(new Error(event.message || "تعطل عامل تشغيل Python."));
+        const error = new Error(event.message || "تعطل عامل تشغيل Python.");
+        this.ready = false;
+        this.running = false;
+        if (this.pendingPackage) {
+          clearTimeout(this.pendingPackage.timer);
+          this.pendingPackage.reject(error);
+          this.pendingPackage = null;
+        }
+        reject(error);
+        this.onMessage({ type: "runtime-error", message: error.message });
       };
       const baseUrl = new URL(import.meta.env.BASE_URL, globalThis.location.origin).href;
       this.worker.postMessage({ type: "init", baseUrl, shared });
@@ -59,6 +77,7 @@ export class PyodideRuntimeAdapter {
   async run({ id, code, files, activeFile }) {
     await this.start();
     if (this.running) throw new Error("هناك برنامج قيد التشغيل بالفعل.");
+    if (this.pendingPackage) throw new Error("انتظر حتى يكتمل تثبيت المكتبة الحالية.");
     this.running = true;
     if (this.interruptBuffer) Atomics.store(new Int32Array(this.interruptBuffer), 0, 0);
     this.worker.postMessage({ type: "run", id, code, files, activeFile });
@@ -66,10 +85,21 @@ export class PyodideRuntimeAdapter {
   async installPackage(packageName, id) {
     await this.start();
     if (this.running) throw new Error("أوقف البرنامج قبل تثبيت مكتبة.");
-    this.worker.postMessage({ type: "install-package", packageName, id });
+    if (this.pendingPackage) throw new Error("هناك عملية تثبيت أخرى قيد التنفيذ.");
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        if (this.pendingPackage?.id === id) {
+          this.pendingPackage = null;
+          reject(new Error("انتهت مهلة تثبيت المكتبة. تحقق من الاتصال وحاول مجدداً."));
+        }
+      }, 300000);
+      this.pendingPackage = { id, resolve, reject, timer };
+      this.worker.postMessage({ type: "install-package", packageName, id });
+    });
   }
   async refreshPackages(id) {
     await this.start();
+    if (this.running || this.pendingPackage) return;
     this.worker.postMessage({ type: "list-packages", id });
   }
   submitInput(value) {
@@ -95,6 +125,11 @@ export class PyodideRuntimeAdapter {
       this.ready = false;
       this.readyPromise = null;
       this.running = false;
+      if (this.pendingPackage) {
+        clearTimeout(this.pendingPackage.timer);
+        this.pendingPackage.reject(new Error("توقفت بيئة Python قبل اكتمال تثبيت المكتبة."));
+        this.pendingPackage = null;
+      }
       this.onMessage({ type: "worker-terminated", text: "أُوقف التنفيذ بإنهاء عامل Python." });
     }
   }
@@ -110,6 +145,11 @@ export class PyodideRuntimeAdapter {
     this.interruptBuffer = null;
     this.inputSupported = false;
     this.interruptSupported = false;
+    if (this.pendingPackage) {
+      clearTimeout(this.pendingPackage.timer);
+      this.pendingPackage.reject(new Error("أُعيد تشغيل بيئة Python."));
+      this.pendingPackage = null;
+    }
     return this.start();
   }
   dispose() {
@@ -118,5 +158,10 @@ export class PyodideRuntimeAdapter {
     this.ready = false;
     this.running = false;
     this.readyPromise = null;
+    if (this.pendingPackage) {
+      clearTimeout(this.pendingPackage.timer);
+      this.pendingPackage.reject(new Error("أُغلقت بيئة Python."));
+      this.pendingPackage = null;
+    }
   }
 }
