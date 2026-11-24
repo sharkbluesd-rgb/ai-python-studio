@@ -409,7 +409,14 @@ async function importFiles(fileList) {
     const path = file.webkitRelativePath || file.name;
     const safe = validateTextFile(path, "");
     if (file.size > 512 * 1024) throw new Error("حجم الملف يتجاوز 512 KB: " + safe);
-    const text = await file.text();
+    let text;
+    try {
+      text = new TextDecoder("utf-8", { fatal: true }).decode(
+        new Uint8Array(await file.arrayBuffer()),
+      );
+    } catch {
+      throw new Error("الملف ليس نص UTF-8 صالحاً: " + safe);
+    }
     validateTextFile(safe, text);
     if (Object.hasOwn(state.project.files, safe) && !confirm("استبدال الملف " + safe + "؟")) continue;
     additions.push([safe, text]);
