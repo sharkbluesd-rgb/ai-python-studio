@@ -141,16 +141,18 @@ export function validateProjectTree(files, folders = []) {
 export async function listProjects() {
   const database = await openProjectDatabase();
   const transaction = database.transaction(STORE_NAME, "readonly");
+  const done = transactionDone(transaction);
   const result = await requestResult(transaction.objectStore(STORE_NAME).getAll());
-  await transactionDone(transaction);
+  await done;
   return result.sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 export async function getProject(projectId) {
   const database = await openProjectDatabase();
   const transaction = database.transaction(STORE_NAME, "readonly");
+  const done = transactionDone(transaction);
   const result = await requestResult(transaction.objectStore(STORE_NAME).get(projectId));
-  await transactionDone(transaction);
+  await done;
   return result || null;
 }
 
