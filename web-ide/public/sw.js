@@ -25,7 +25,7 @@ self.addEventListener("fetch", (event) => {
   if (!sameOrigin && !pyodideCdn) return;
 
   const isNavigation = sameOrigin && (
-    request.mode === "navigate" || /\\.html?$/i.test(url.pathname)
+    request.mode === "navigate" || /\.html?$/i.test(url.pathname)
   );
 
   event.respondWith((async () => {
