@@ -548,6 +548,9 @@ function setRunning(running) {
   }
   $("file-list").querySelectorAll("button").forEach((button) => { button.disabled = running; });
   $("editor-tabs").querySelectorAll("button").forEach((button) => { button.disabled = running; });
+  $("programmer-keyboard").querySelectorAll("button").forEach((button) => { button.disabled = running; });
+  $("terminal-input").disabled = running;
+  $("terminal-form").querySelector("button").disabled = running;
   if (editorView) editorView.contentDOM.contentEditable = String(!running);
 }
 async function runCurrentFile() {
