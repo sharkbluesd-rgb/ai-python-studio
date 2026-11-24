@@ -160,6 +160,14 @@ def _store(session_id: str) -> WorkspaceStore:
     return WorkspaceStore(DATA_ROOT / session_id / "workspace")
 
 
+def _ensure_build_workflow(project_root: Path) -> None:
+    """Add the trusted builder workflow when an imported project has none."""
+    workflow = project_root / ".github" / "workflows" / "build-apk.yml"
+    if not workflow.exists():
+        workflow.parent.mkdir(parents=True, exist_ok=True)
+        workflow.write_text(TEMPLATES["Flet Android App"][".github/workflows/build-apk.yml"], encoding="utf-8")
+
+
 def _github(session: dict[str, Any]) -> GitHubClient:
     client = session.get("github")
     if not isinstance(client, GitHubClient):
@@ -213,6 +221,7 @@ async def get_session(request: Request) -> dict[str, Any]:
     client = session.get("github")
     return {
         "authenticated": isinstance(client, GitHubClient),
+        "csrf_token": session["csrf"],
         "project": (
             {"id": session["project_id"], "name": session["project_name"]}
             if session.get("project_id") else None
@@ -356,6 +365,7 @@ async def import_project(
     try:
         store = _store(session_id)
         project_id = await asyncio.to_thread(store.import_project_archive, payload, name)
+        _ensure_build_workflow(store._project_dir(project_id))
         session["project_id"] = project_id
         session["project_name"] = name
         issues = await asyncio.to_thread(
@@ -376,6 +386,7 @@ async def create_starter(request: Request) -> dict[str, Any]:
         project_id = await asyncio.to_thread(
             store.create_project_from_template, name, TEMPLATES["Flet Android App"]
         )
+        _ensure_build_workflow(store._project_dir(project_id))
     except (WorkspaceError, OSError, KeyError) as exc:
         raise _github_error(exc) from exc
     session["project_id"] = project_id
