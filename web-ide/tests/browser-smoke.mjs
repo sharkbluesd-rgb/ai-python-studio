@@ -46,7 +46,7 @@ try {
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
-  await page.locator("#runtime-state.ready").waitFor({ timeout: 120000 });
+  await page.waitForFunction(() => document.querySelector("#runtime-state")?.classList.contains("ready"), undefined, { timeout: 120000 });
   const isolated = await page.evaluate(() => window.crossOriginIsolated);
   assert.equal(isolated, true, "COOP/COEP headers must enable cross-origin isolation for interactive stdin and interrupts.");
 
@@ -57,7 +57,7 @@ try {
   await page.waitForFunction(() => document.querySelector("#output-text").textContent.includes("BROWSER_SMOKE_OK"));
 
   await page.reload({ waitUntil: "domcontentloaded" });
-  await page.locator("#runtime-state.ready").waitFor({ timeout: 120000 });
+  await page.waitForFunction(() => document.querySelector("#runtime-state")?.classList.contains("ready"), undefined, { timeout: 120000 });
   const restoredCode = await page.locator("#editor .cm-content").innerText();
   assert.match(restoredCode, /BROWSER_SMOKE_OK/, "IndexedDB should restore the last saved source after reload.");
 
