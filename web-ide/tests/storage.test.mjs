@@ -3,7 +3,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   createProject, deleteProject, getProject, normalizeProjectPath,
-  saveProject, validateTextFile,
+  saveProject, validateTextFile, validateProjectTree, MAX_PROJECT_BYTES,
 } from "../src/storage.js";
 
 test("IndexedDB stores project files and restores them after a fresh read", async () => {
@@ -24,4 +24,23 @@ test("project paths reject traversal, absolute paths and unsupported extensions"
   assert.throws(() => normalizeProjectPath("/etc/passwd"), /غير صالح/);
   assert.throws(() => validateTextFile("payload.exe", "bad"), /غير مدعوم/);
   assert.throws(() => validateTextFile("large.py", "x".repeat(512 * 1024 + 1)), /512 KB/);
+});
+
+test("project storage enforces total-size and file/folder collision limits", () => {
+  assert.throws(() => validateProjectTree({
+    "large.py": "x".repeat(MAX_PROJECT_BYTES + 1),
+  }), /12 MB/);
+  assert.throws(() => validateProjectTree({
+    "src": "a file",
+    "src/main.py": "print(1)",
+  }), /تعارض/);
+  assert.throws(() => validateProjectTree({
+    "src/main.py": "print(1)",
+  }, ["src/main.py"]), /تعارض/);
+  assert.throws(() => normalizeProjectPath("src/\u0001main.py"), /غير صالح/);
+});
+
+test("project storage normalizes and keeps explicit empty folders", () => {
+  const result = validateProjectTree({ "main.py": "print(1)" }, ["assets", "assets/images"]);
+  assert.deepEqual(result.folders.sort(), ["assets", "assets/images"]);
 });
