@@ -78,13 +78,18 @@ export class PyodideRuntimeAdapter {
     });
     return this.readyPromise;
   }
-  async run({ id, code, files, activeFile }) {
+  async run({ id, projectId, code, files, activeFile }) {
     await this.start();
     if (this.running) throw new Error("هناك برنامج قيد التشغيل بالفعل.");
     if (this.pendingPackage) throw new Error("انتظر حتى يكتمل تثبيت المكتبة الحالية.");
     this.running = true;
     if (this.interruptBuffer) Atomics.store(new Int32Array(this.interruptBuffer), 0, 0);
-    this.worker.postMessage({ type: "run", id, code, files, activeFile });
+    try {
+      this.worker.postMessage({ type: "run", id, projectId, code, files, activeFile });
+    } catch (error) {
+      this.running = false;
+      throw error;
+    }
   }
   async installPackage(packageName, id) {
     await this.start();
