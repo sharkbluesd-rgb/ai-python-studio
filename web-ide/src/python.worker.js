@@ -94,17 +94,26 @@ async function execute(message) {
 }
 
 async function installPackage(message) {
-  send("package-progress", { id: message.id, text: "تحميل micropip..." });
-  await pyodide.loadPackage("micropip");
-  const micropip = pyodide.pyimport("micropip");
   try {
-    send("package-progress", { id: message.id, text: "جارٍ تنزيل " + message.packageName });
-    await micropip.install(message.packageName);
-    send("package-progress", { id: message.id, text: "تم تثبيت " + message.packageName });
-  } finally { micropip.destroy(); }
-  await listPackages(message.id);
+    send("package-progress", { id: message.id, text: "تحميل micropip..." });
+    await pyodide.loadPackage("micropip");
+    const micropip = pyodide.pyimport("micropip");
+    try {
+      send("package-progress", { id: message.id, text: "جارٍ تنزيل " + message.packageName });
+      await micropip.install(message.packageName);
+      send("package-progress", { id: message.id, text: "تم تثبيت " + message.packageName });
+    } finally {
+      micropip.destroy();
+    }
+    await listPackages(message.id);
+    send("package-installed", { id: message.id, packageName: message.packageName });
+  } catch (error) {
+    send("package-failed", {
+      id: message.id,
+      message: String(error?.message || error),
+    });
+  }
 }
-
 async function listPackages(id) {
   const json = pyodide.runPython(
     "import importlib.metadata, json\n"
