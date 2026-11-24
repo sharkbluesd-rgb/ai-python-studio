@@ -60,6 +60,7 @@ export class PyodideRuntimeAdapter {
     await this.start();
     if (this.running) throw new Error("هناك برنامج قيد التشغيل بالفعل.");
     this.running = true;
+    if (this.interruptBuffer) Atomics.store(new Int32Array(this.interruptBuffer), 0, 0);
     this.worker.postMessage({ type: "run", id, code, files, activeFile });
   }
   async installPackage(packageName, id) {
