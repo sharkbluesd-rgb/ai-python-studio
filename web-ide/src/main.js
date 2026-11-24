@@ -358,6 +358,7 @@ async function duplicateCurrentFile() {
 async function renameProjectAction() {
   const name = prompt("اسم المشروع:", state.project.name);
   if (!name || name === state.project.name) return;
+  await saveNow();
   state.project = await renameProject(state.project.id, name);
   updateFileHeading();
   await refreshProjectList();
