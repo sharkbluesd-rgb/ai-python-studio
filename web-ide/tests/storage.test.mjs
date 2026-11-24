@@ -27,9 +27,10 @@ test("project paths reject traversal, absolute paths and unsupported extensions"
 });
 
 test("project storage enforces total-size and file/folder collision limits", () => {
-  assert.throws(() => validateProjectTree({
-    "large.py": "x".repeat(MAX_PROJECT_BYTES + 1),
-  }), /12 MB/);
+  const oversizedProject = Object.fromEntries(
+    Array.from({ length: 25 }, (_, index) => [`chunk${index}.txt`, "x".repeat(512 * 1024)]),
+  );
+  assert.throws(() => validateProjectTree(oversizedProject), /12 MB/);
   assert.throws(() => validateProjectTree({
     "src": "a file",
     "src/main.py": "print(1)",
