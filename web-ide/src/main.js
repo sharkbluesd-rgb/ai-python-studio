@@ -788,8 +788,24 @@ function handleProgrammerKey(key) {
     else if (shortcut === "z") undo(editorView);
     else if (shortcut === "y") redo(editorView);
     else if (shortcut === "c" || shortcut === "x") {
-      navigator.clipboard?.writeText(editorView.state.sliceDoc(selection.from, selection.to)).catch(() => toast("تعذر الوصول إلى الحافظة."));
-      if (shortcut === "x" && !selection.empty) editorView.dispatch({ changes: { from: selection.from, to: selection.to, insert: "" } });
+      const selectedText = editorView.state.sliceDoc(selection.from, selection.to);
+      if (!navigator.clipboard?.writeText) {
+        toast("الحافظة غير متاحة في هذا المتصفح.");
+      } else {
+        navigator.clipboard.writeText(selectedText).then(() => {
+          if (
+            shortcut === "x" &&
+            !selection.empty &&
+            editorView.state.sliceDoc(selection.from, selection.to) === selectedText
+          ) {
+            editorView.dispatch({
+              changes: { from: selection.from, to: selection.to, insert: "" },
+              selection: { anchor: selection.from },
+            });
+            editorView.focus();
+          }
+        }).catch(() => toast("تعذر النسخ إلى الحافظة؛ لم يتم حذف النص."));
+      }
     } else if (shortcut === "v") {
       navigator.clipboard?.readText().then((text) => insertAtCursor(text)).catch(() => toast("تعذر قراءة الحافظة."));
     } else toast("اختصار غير مدعوم.");
