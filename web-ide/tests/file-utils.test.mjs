@@ -15,5 +15,5 @@ test("duplicate suggestions preserve parent directories and extensions", () => {
   assert.equal(suggestedDuplicatePath("main.py"), "main_copy.py");
   assert.equal(suggestedDuplicatePath("src/helpers.pyw"), "src/helpers_copy.pyw");
   assert.equal(suggestedDuplicatePath("notes.txt"), "notes_copy.txt");
-  assert.equal(suggestedDuplicatePath("main.py.backup"), "main.py.backup_copy");
+  assert.equal(suggestedDuplicatePath("main.py.backup"), "main.py_copy.backup");
 });
