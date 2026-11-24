@@ -5,14 +5,18 @@ on:
     branches:
       - feature/studio-2.0
     paths:
-      - "src/main.py"
+      - "src/web_api.py"
       - "src/flet_project.py"
       - "src/github_cloud.py"
       - "src/workspace.py"
       - "src/templates.py"
+      - "requirements.txt"
+      - "pyproject.toml"
+      - "render.yaml"
       - "tools/build_static_web_preview.py"
       - "web-preview-static/**"
       - "tests/**"
+      - "WEB_ARCHITECTURE.md"
       - ".github/workflows/web-preview.yml"
   workflow_dispatch:
 
@@ -24,95 +28,52 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    name: Test builder and prepare browser preview
+  test:
+    name: Test web API and prepare static assets
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pages: write
     steps:
-      - name: Check out feature branch
-        uses: actions/checkout@v7
-
-      - name: Set up Python
-        uses: actions/setup-python@v7
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
-
-      - name: Install project and quality tools
+      - name: Install web service and quality tools
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e .
+          python -m pip install -r requirements.txt
+          python -m pip install -e . --no-deps
           python -m pip install ruff bandit pip-audit
-
-      - name: Compile Python source
+      - name: Compile source
         run: python -m compileall -q src tests tools
-
-      - name: Run unit and startup tests
+      - name: Run unit tests
         env:
           PYTHONPATH: src
         run: python -m unittest discover -s tests -v
-
-      - name: Run static and security checks
+      - name: Lint and audit
         run: |
           ruff check src tests --select E4,E7,E9,F
           bandit -q -r src -lll
           pip-audit -r requirements.txt
-
-      - name: Build standalone APK builder preview
-        run: python tools/build_static_web_preview.py --output build/web
-
-      - name: Verify static preview
+      - name: Verify web assets
         run: |
+          python tools/build_static_web_preview.py --output build/web
           test -s build/web/index.html
           test -s build/web/style.css
           test -s build/web/app.js
           python - <<'PY'
           from pathlib import Path
-          root = Path("build/web")
-          html = (root / "index.html").read_text(encoding="utf-8")
-          script = (root / "app.js").read_text(encoding="utf-8")
+          html = Path("build/web/index.html").read_text(encoding="utf-8")
+          script = Path("build/web/app.js").read_text(encoding="utf-8")
           assert "Flet APK Studio" in html
-          assert "رفع المشروع وبدء بناء APK" in html
-          assert "CodeEditor" not in html + script
-          assert 'id="source-editor"' not in html
-          print("Verified responsive Flet APK builder preview.")
+          assert "/api/build/start" in script
+          assert "/api/build/download" in script
+          print("Verified the web frontend is wired to the FastAPI routes.")
           PY
-
-      - name: Upload browser preview
-        uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v7
         with:
-          name: flet-apk-studio-web-preview
+          name: flet-apk-studio-web
           path: build/web
           if-no-files-found: error
           retention-days: 14
-
-      - name: Upload Pages deployment artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: build/web
-          name: github-pages
-
-  deploy:
-    name: Publish browser preview
-    needs: build
-    if: github.ref == 'refs/heads/feature/studio-2.0'
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-      contents: read
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy preview to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5
-        with:
-          artifact_name: github-pages
-
-      - name: Report deployment
-        if: always()
-        run: echo 'Check build and deploy job results before sharing the preview URL.' >> $GITHUB_STEP_SUMMARY
