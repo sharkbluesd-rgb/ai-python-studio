@@ -13,6 +13,7 @@ import {
   normalizeProjectPath, renameProject, saveProject, validateTextFile,
 } from "./storage.js";
 import { PyodideRuntimeAdapter } from "./runtime-adapter.js";
+import { isPythonSourcePath, suggestedDuplicatePath } from "./file-utils.js";
 import "./style.css";
 
 const $ = (id) => document.getElementById(id);
@@ -340,7 +341,7 @@ async function renameCurrentFile() {
 }
 async function duplicateCurrentFile() {
   if (!state.currentPath) return;
-  const suggested = state.currentPath.replace(/(\.[^./]+)?$/, "_copy$1");
+  const suggested = suggestedDuplicatePath(state.currentPath);
   const target = prompt("مسار النسخة الجديدة:", suggested);
   if (!target) return;
   await saveNow();
@@ -551,7 +552,7 @@ function setRunning(running) {
 }
 async function runCurrentFile() {
   if (!state.currentPath) { toast("أنشئ ملف Python أولاً.", "error"); return; }
-  if (!/\.pyw?$/i.test(state.currentPath)) {
+  if (!isPythonSourcePath(state.currentPath)) {
     toast("يمكن تشغيل ملفات Python فقط (.py أو .pyw).", "error");
     return;
   }
@@ -739,7 +740,7 @@ async function runTerminalCommand(command) {
       if (!Object.hasOwn(state.project.files, safe)) throw new Error("الملف غير موجود.");
       openFile(safe);
     }
-    if (!/\.pyw?$/i.test(state.currentPath)) throw new Error("اختر ملف Python لتشغيله.");
+    if (!isPythonSourcePath(state.currentPath)) throw new Error("اختر ملف Python لتشغيله.");
     await runCurrentFile();
   } else if (verb === "cat") {
     const safe = normalizeProjectPath(argument);
