@@ -132,7 +132,7 @@ function renderFiles() {
     icon.className = "tree-icon";
     icon.textContent = item.folder
       ? (state.collapsedFolders.has(item.path) ? "▸" : "▾")
-      : item.path.toLowerCase().endsWith(".py") ? "Py" : "•";
+      : isPythonSourcePath(item.path) ? "Py" : "•";
     const label = document.createElement("span");
     label.textContent = basename(item.path);
     button.append(icon, label);
@@ -479,7 +479,7 @@ async function importZip(file) {
   const nextFolders = Array.from(new Set([...(state.project.folders || []), ...folders]));
   state.project = await saveProject({ ...state.project, files: nextFiles, folders: nextFolders });
   renderFiles();
-  const firstPython = Object.keys(imported).find((path) => path.endsWith(".py")) || Object.keys(imported)[0];
+  const firstPython = Object.keys(imported).find((path) => isPythonSourcePath(path)) || Object.keys(imported)[0];
   openFile(firstPython);
   toast("تم استيراد " + Object.keys(imported).length + " ملف من ZIP.", "success");
 }
