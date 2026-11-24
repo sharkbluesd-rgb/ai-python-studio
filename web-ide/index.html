@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1020">
+  <meta name="description" content="PYTHON STUDIO MOBILE — بيئة تطوير Python احترافية للهواتف">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>PYTHON STUDIO MOBILE</title>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <button class="icon-button sidebar-trigger" id="sidebar-toggle" aria-label="فتح مستكشف الملفات">☰</button>
+      <a class="brand" href="./" aria-label="Python Studio Mobile">
+        <span class="brand-mark">Py</span>
+        <span class="brand-name"><strong>PYTHON STUDIO</strong><small>MOBILE IDE</small></span>
+      </a>
+      <div class="top-actions">
+        <span class="runtime-pill" id="runtime-state"><i></i><span>تهيئة Python</span></span>
+        <button class="icon-button" id="save-button" title="حفظ الآن" aria-label="حفظ">✓</button>
+        <button class="run-button" id="run-button"><span>▶</span><b>تشغيل</b></button>
+        <button class="stop-button" id="stop-button" disabled><span>■</span><b>إيقاف</b></button>
+      </div>
+    </header>
+    <div class="workspace">
+      <aside class="sidebar" id="file-sidebar">
+        <div class="sidebar-heading">
+          <div><span class="section-kicker">WORKSPACE</span><h2>المشاريع والملفات</h2></div>
+          <button class="icon-button small" id="sidebar-close" aria-label="إغلاق">×</button>
+        </div>
+        <div class="project-select-row">
+          <select id="project-select" aria-label="المشروع الحالي"></select>
+          <button class="icon-button small" id="new-project" title="مشروع جديد">＋</button>
+        </div>
+        <div class="file-actions">
+          <button id="new-file">＋ ملف</button><button id="new-folder">＋ مجلد</button><button id="import-files">استيراد</button>
+        </div>
+        <div class="tree-title"><span>ملفات المشروع</span><span id="file-count">0</span></div>
+        <nav class="file-list" id="file-list" aria-label="ملفات المشروع"></nav>
+        <div class="sidebar-footer"><button id="import-zip">استيراد ZIP</button><button id="export-zip">تصدير ZIP</button></div>
+      </aside>
+      <main class="main-area">
+        <div class="editor-toolbar">
+          <div class="file-heading"><span class="python-file-icon">PY</span><div><strong id="active-filename">main.py</strong><small id="project-breadcrumb">مشروعي / main.py</small></div></div>
+          <div class="editor-tools">
+            <button class="tool-button" id="search-button" title="بحث واستبدال">⌕</button>
+            <button class="tool-button" id="goto-button" title="الانتقال إلى سطر">#</button>
+            <label class="font-control" title="حجم الخط"><span>A</span><input id="font-size" type="range" min="12" max="22" value="15"></label>
+            <button class="tool-button" id="theme-button" title="تغيير المظهر">☼</button>
+          </div>
+        </div>
+        <div class="tabs" id="editor-tabs" role="tablist" aria-label="الملفات المفتوحة"></div>
+        <section class="editor-section">
+          <div id="editor" class="code-editor" aria-label="محرر Python"></div>
+          <div class="programmer-keyboard" id="programmer-keyboard" aria-label="أدوات لوحة مفاتيح المبرمج">
+            <button data-key="(">(</button><button data-key=")">)</button><button data-key="[">[</button><button data-key="]">]</button><button data-key="{">{</button><button data-key="}">}</button><button data-key=":">:</button><button data-key="'">'</button><button data-key="&quot;">"</button><button data-key="=">=</button><button data-key="+">+</button><button data-key="-">−</button><button data-key="*">*</button><button data-key="/">/</button><button data-key="#">#</button><button data-key="_">_</button><button data-key=",">,</button><button data-key=".">.</button><button data-key="&lt;"><</button><button data-key="&gt;">></button>
+            <button class="wide-key" data-key="TAB">Tab</button><button class="wide-key" data-key="INDENT">Indent</button><button class="wide-key" data-key="ENTER">Enter</button><button data-key="ARROWLEFT">←</button><button data-key="ARROWRIGHT">→</button><button data-key="ARROWUP">↑</button><button data-key="ARROWDOWN">↓</button><button class="modifier-key" data-key="CTRL">Ctrl</button><button class="modifier-key" data-key="SHIFT">Shift</button><button class="modifier-key" data-key="ESC">Esc</button>
+          </div>
+        </section>
+        <section class="bottom-panel" id="bottom-panel">
+          <div class="panel-header">
+            <div class="panel-tabs" role="tablist" aria-label="لوحة النتائج">
+              <button class="panel-tab active" data-panel="output">Output</button><button class="panel-tab" data-panel="errors">Errors <span class="error-count" id="error-count">0</span></button><button class="panel-tab" data-panel="terminal">Terminal</button><button class="panel-tab" data-panel="packages">Packages</button>
+            </div>
+            <div class="panel-actions"><span id="run-duration">جاهز</span><button id="clear-output" class="tool-button" title="مسح">⌫</button><button id="panel-toggle" class="tool-button" title="طي اللوحة">⌄</button></div>
+          </div>
+          <div class="panel-content">
+            <div class="console-view active" id="output-view"><pre id="output-text" aria-live="polite">جاهز. اضغط «تشغيل» لتنفيذ ملف Python.</pre></div>
+            <div class="console-view" id="errors-view"><pre id="error-text" aria-live="polite">لا توجد أخطاء حتى الآن.</pre></div>
+            <div class="console-view" id="terminal-view">
+              <pre id="terminal-text">هذه وحدة أوامر خاصة بالمحرر وليست طرفية Linux.
+اكتب help لعرض الأوامر المدعومة.</pre>
+              <form id="terminal-form" class="terminal-form"><span>›</span><input id="terminal-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="help"><button>تنفيذ</button></form>
+              <form id="stdin-form" class="stdin-form hidden"><label id="stdin-label" for="stdin-input">إدخال Python</label><input id="stdin-input" autocomplete="off"><button>إرسال</button></form>
+            </div>
+            <div class="console-view packages-view" id="packages-view">
+              <div class="package-install"><input id="package-input" placeholder="اسم المكتبة مثل requests أو numpy" autocomplete="off"><button id="package-install-button">تثبيت</button></div>
+              <p class="package-note">يدعم Pyodide الحزم المبنية لـ WebAssembly وحزم Python النقية. الحزم التي تتطلب امتدادات أصلية غير متوافقة قد تفشل.</p>
+              <div id="package-status" class="package-status">قائمة الحزم تظهر بعد تشغيل بيئة Python.</div><div id="package-list" class="package-list"></div>
+            </div>
+          </div>
+        </section>
+        <footer class="statusbar"><span id="status-message">تم فتح مساحة العمل المحلية</span><span id="python-version">Python: جارٍ التحميل</span><span id="cursor-position">Ln 1, Col 1</span></footer>
+      </main>
+    </div>
+    <input id="file-picker" type="file" multiple hidden><input id="zip-picker" type="file" accept=".zip,application/zip" hidden>
+    <div class="toast-region" id="toast-region" aria-live="polite"></div><div class="mobile-scrim" id="mobile-scrim"></div>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
