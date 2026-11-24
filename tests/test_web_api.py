@@ -4,6 +4,8 @@ import tempfile
 import unittest
 
 import web_api
+from fastapi.testclient import TestClient
+from unittest.mock import patch
 
 
 class WebApiSecurityTests(unittest.TestCase):
@@ -34,6 +36,30 @@ class WebApiSecurityTests(unittest.TestCase):
             "/api/build/status", "/api/build/download",
         }
         self.assertTrue(expected.issubset(routes))
+
+    def test_session_bootstrap_csrf_and_starter_project(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.object(web_api, "DATA_ROOT", Path(directory)):
+                with patch.object(web_api, "COOKIE_SECURE", False):
+                    with TestClient(web_api.app) as client:
+                        created = client.post("/api/session")
+                        self.assertEqual(created.status_code, 200)
+                        csrf = created.json()["csrf_token"]
+                        session = client.get("/api/session")
+                        self.assertEqual(session.status_code, 200)
+                        self.assertEqual(session.json()["csrf_token"], csrf)
+
+                        denied = client.post("/api/projects/starter")
+                        self.assertEqual(denied.status_code, 403)
+
+                        starter = client.post(
+                            "/api/projects/starter",
+                            headers={"X-CSRF-Token": csrf},
+                        )
+                        self.assertEqual(starter.status_code, 200)
+                        current = client.get("/api/projects/current")
+                        self.assertEqual(current.status_code, 200)
+                        self.assertTrue(current.json()["ready"])
 
     def test_imported_projects_receive_trusted_build_workflow(self):
         with tempfile.TemporaryDirectory() as directory:
