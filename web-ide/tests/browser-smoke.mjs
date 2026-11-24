@@ -139,7 +139,7 @@ try {
 
   await page.locator("#editor .cm-content").fill("value = 10");
   await page.locator('[data-key="("]').click();
-  assert.match(await page.locator("#editor .cm-content").innerText(), /\\(/, "Programmer keyboard buttons should insert characters into the editor.");
+  assert.match(await page.locator("#editor .cm-content").innerText(), /\(/, "Programmer keyboard buttons should insert characters into the editor.");
   await page.locator("#font-size").fill("18");
 
   const promptQueue = [];
@@ -187,7 +187,7 @@ try {
   const downloadPromise = page.waitForEvent("download");
   await page.locator("#export-zip").click();
   const download = await downloadPromise;
-  assert.match(download.suggestedFilename(), /\\.zip$/);
+  assert.match(download.suggestedFilename(), /\.zip$/);
 
   assert.deepEqual(pageErrors, [], "The browser page should not throw unexpected JavaScript errors.");
   assert.deepEqual(consoleErrors, [], "The browser console should not report unexpected errors.");
