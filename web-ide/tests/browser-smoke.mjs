@@ -159,6 +159,8 @@ try {
   await page.locator("#new-file").click();
   await page.locator('#file-list button[data-path="tools/demo.py"]').waitFor({ state: "visible" });
   await page.locator('#file-list button[data-path="tools/demo.py"]').click();
+  await page.locator("#sidebar-toggle").click();
+  await page.locator("#file-sidebar.open").waitFor({ state: "visible" });
   await page.locator("#editor .cm-content").fill("print('FILE_BUTTON_OK')");
   await page.locator("#save-button").click();
 
