@@ -190,7 +190,7 @@ async def health() -> dict[str, str]:
 
 
 @app.post("/api/session")
-async def create_session(request: Request, response: Response) -> dict[str, str]:
+async def create_session(request: Request, response: Response) -> dict[str, Any]:
     origin = request.headers.get("origin")
     if origin:
         allowed = {str(request.base_url).rstrip("/")}
