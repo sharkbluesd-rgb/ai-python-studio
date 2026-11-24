@@ -959,8 +959,10 @@ async function bootstrap() {
     $("runtime-state").querySelector("span").textContent = "Python جاهز";
     $("python-version").textContent = "Python " + ready.version;
   } catch (error) {
+    state.runtimeReady = false;
     $("runtime-state").querySelector("span").textContent = "تعذر تحميل Python";
     $("runtime-state").classList.add("error");
+    $("restart-runtime").disabled = false;
     $("python-version").textContent = "Python غير متاح";
     toast("المحرر يعمل، لكن تعذر تحميل بيئة Python: " + error.message, "error");
   }
