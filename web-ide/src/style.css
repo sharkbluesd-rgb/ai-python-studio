@@ -9,3 +9,46 @@ body.light{--bg:#edf0f6;--panel:#fff;--panel2:#f2f4fa;--line:#d4dbea;--text:#202
 @media(max-width:760px){.topbar{height:57px;padding:0 9px;gap:7px}.sidebar-trigger{display:grid}.brand{min-width:0;gap:7px}.brand-mark{width:33px;height:33px;border-radius:10px;font-size:14px}.brand-name strong{font-size:10px}.brand-name small{font-size:8px}.runtime-pill{padding:7px 8px;font-size:0}.runtime-pill span{font-size:9px;max-width:70px;overflow:hidden;text-overflow:ellipsis}.top-actions{gap:5px}.top-actions .icon-button{width:32px;height:32px}.run-button,.stop-button{height:32px;padding:0 9px;font-size:10px}.sidebar{position:fixed;z-index:40;top:57px;bottom:0;right:0;width:min(285px,85vw);transform:translateX(105%);transition:transform .2s ease;box-shadow:-18px 0 42px #0005}.sidebar.open{transform:translateX(0)}.sidebar .sidebar-close{display:grid}.mobile-scrim.visible{display:block;position:fixed;z-index:35;inset:57px 0 0;background:#0008}.editor-toolbar{height:47px;padding:0 9px}.editor-tools{gap:4px}.tool-button{width:28px;height:28px}.font-control input{width:42px}.tabs{height:34px}.editor-section{min-height:0}.programmer-keyboard{padding:6px 7px;gap:4px}.programmer-keyboard button{min-width:30px;height:29px;font-size:11px}.bottom-panel{height:190px;min-height:135px}.panel-header{padding:0 7px}.panel-tab{padding:0 7px;font-size:9px}.panel-actions{gap:5px}.statusbar{height:23px;padding:0 7px}.statusbar span:first-child{max-width:43%}.toast-region{bottom:30px}}
 @media(max-width:390px){.brand-name strong{font-size:9px;letter-spacing:.5px}.runtime-pill{display:none}.editor-toolbar{padding:0 6px}.font-control input{width:35px}.programmer-keyboard button{min-width:28px}.panel-tab{padding:0 5px}.bottom-panel{height:175px}}
 @media(orientation:landscape) and (max-height:520px){.app-shell{min-height:0;height:100dvh}.topbar{height:46px}.sidebar{top:46px;padding:10px}.mobile-scrim.visible{top:46px}.editor-toolbar{height:40px}.tabs{height:29px}.programmer-keyboard{padding:4px}.programmer-keyboard button{height:26px}.bottom-panel{height:145px;min-height:110px}.statusbar{height:20px}}
+
+
+/* Pydroid-inspired Android IDE refresh */
+:root{--bg:#eef1f5;--panel:#fff;--panel2:#f5f7fa;--line:#d9e0e8;--text:#263442;--muted:#718093;--purple:#1976d2;--green:#238b50;--editor-font-size:15px}
+.app-shell{background:#eef1f5}
+.topbar{height:58px;background:#fff;border-bottom:1px solid #dce2e9;box-shadow:0 2px 5px #25364a0c;padding:0 13px}
+.brand{color:#273747}.brand-mark{background:linear-gradient(145deg,#ffcf48,#e9a51c);color:#26384a;border-radius:9px;box-shadow:inset 0 0 0 1px #d99b20}
+.brand-name strong{letter-spacing:.5px}.brand-name small{color:#788697}
+.icon-button,.tool-button{background:#f8fafc;border-color:#d8e0e9;color:#4e5d6d;border-radius:8px}
+.icon-button:hover,.tool-button:hover{background:#edf4fb;color:#1976d2}
+.runtime-pill{background:#f8fafc;border-color:#e0e5eb;color:#687687;border-radius:7px}
+.run-button{background:#27864d;border-radius:7px}.run-button:hover{background:#1d7541}
+.stop-button{background:#fbe9e9;color:#b63838;border:1px solid #f0caca;border-radius:7px}
+.sidebar{background:#fff;border-color:#dce2e9;padding:15px 12px;gap:13px}
+.sidebar-heading h2{color:#283747}.section-kicker{color:#7d8b9a}
+.project-select-row select{background:#fff;color:#293747;border-color:#d8e0e9;border-radius:7px}
+.file-actions button,.sidebar-footer button{background:#f5f7fa;border-color:#dce3eb;color:#48596b;border-radius:6px}
+.file-actions button:hover,.sidebar-footer button:hover{background:#eaf3fc;border-color:#b7d3ef;color:#1769b0}
+.tree-item{color:#526174;border-radius:6px}.tree-item:hover{background:#f1f5f9}.tree-item.active{background:#e7f1fc;color:#155f9f;font-weight:700}
+.main-area,.editor-section{background:#fff}
+.editor-toolbar{height:48px;background:#f8fafc;border-color:#e0e5eb}
+.python-file-icon{background:#fff3d4;color:#a87512;border:1px solid #f0dfb6;border-radius:6px}
+.file-heading strong{color:#2c3948}.file-heading small{color:#8290a0}
+.tabs{background:#f1f3f6;border-color:#dce2e9}.editor-tab{background:#f5f7fa;border-color:#dce2e9;color:#667587}.editor-tab.active{background:#fff;color:#253647;border-bottom-color:#1976d2}
+.programmer-keyboard{background:#f0f3f7;border-color:#dce2e9;padding:7px 9px}
+.programmer-keyboard button{background:#fff;border-color:#d2dbe5;color:#34475b;border-radius:6px;box-shadow:0 1px 1px #1c2c3b0a}
+.programmer-keyboard button:active,.programmer-keyboard button.modifier-active{background:#dcecfb;border-color:#8bbce7;color:#145e9e}
+.programmer-keyboard .modifier-key{background:#e4eaf1;color:#4a5b6e}
+.bottom-panel{height:205px;background:#202a35;border-color:#cfd7e1}
+.panel-header{background:#f3f5f8;border-color:#d8dfe7}
+.panel-tab{color:#68788a}.panel-tab.active{background:#e2eef9;color:#1768a9}
+.panel-content{background:#202a35}.console-view pre{color:#e0e8f0}.console-view#errors-view pre{color:#ffaaaa}
+.terminal-form input,.stdin-form input,.package-install input{background:#2a3745;border-color:#526171;color:#fff;border-radius:6px}
+.terminal-form button,.stdin-form button,.package-install button{background:#1976d2;border-radius:6px}
+.package-note{color:#bac5d1}.package-status{color:#9fc8ed}.package-row{background:#2a3745;border-color:#526171;color:#e7edf4}
+.statusbar{background:#e7edf4;color:#58697c;border-color:#d6dee7}
+.toast{background:#fff;color:#263647;border-color:#cbd7e4;border-radius:8px}
+body.light .app-shell,body.light .main-area,body.light .editor-section{background:#fff}
+body.light .topbar,body.light .editor-toolbar,body.light .tabs,body.light .editor-tab,body.light .panel-header,body.light .sidebar{background:#fff;color:#253047}
+body.light .brand,body.light .file-heading strong{color:#253047}
+body.light .bottom-panel{background:#202a35}
+@media(max-width:760px){.topbar{height:55px;padding:0 8px}.sidebar{top:55px}.mobile-scrim.visible{top:55px}.editor-toolbar{height:45px}.programmer-keyboard{padding:6px 7px}.bottom-panel{height:185px;min-height:130px}}
+@media(max-width:390px){.bottom-panel{height:170px}}
