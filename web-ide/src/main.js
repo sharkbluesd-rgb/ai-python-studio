@@ -603,6 +603,7 @@ function handleRuntimeMessage(message) {
     $("runtime-state").querySelector("span").textContent = message.text;
   } else if (message.type === "ready") {
     state.runtimeReady = true;
+    $("restart-runtime").disabled = false;
     $("runtime-state").classList.add("ready");
     $("runtime-state").querySelector("span").textContent = "Python جاهز";
     $("python-version").textContent = "Python " + message.version;
@@ -654,6 +655,9 @@ function handleRuntimeMessage(message) {
     renderPackages(message.packages || []);
   } else if (message.type === "runtime-error" || message.type === "init-failed") {
     state.runtimeReady = false;
+    if (message.type === "init-failed" || (!runtime.worker && !runtime.readyPromise)) {
+      $("restart-runtime").disabled = false;
+    }
     $("runtime-state").classList.remove("ready", "busy");
     $("runtime-state").classList.add("error");
     $("runtime-state").querySelector("span").textContent = "خطأ في Python";
@@ -663,6 +667,7 @@ function handleRuntimeMessage(message) {
     addRuntimeError(message.message || "خطأ في بيئة التشغيل.");
   } else if (message.type === "worker-terminated") {
     state.runtimeReady = false;
+    $("restart-runtime").disabled = false;
     $("runtime-state").classList.remove("ready", "busy");
     $("runtime-state").querySelector("span").textContent = "Python متوقف";
     $("run-duration").textContent = "تم الإيقاف";
@@ -689,6 +694,7 @@ async function restartPythonRuntime() {
   } catch (error) {
     state.runtimeReady = false;
     $("runtime-state").classList.add("error");
+    $("restart-runtime").disabled = false;
     $("runtime-state").querySelector("span").textContent = "تعذر تحميل Python";
     $("python-version").textContent = "Python غير متاح";
     toast(error.message, "error");
