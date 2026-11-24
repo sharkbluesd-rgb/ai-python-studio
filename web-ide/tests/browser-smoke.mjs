@@ -59,15 +59,17 @@ try {
   assert.equal(isolated, true, "COOP/COEP headers must enable cross-origin isolation for interactive stdin and interrupts.");
 
   const editor = page.locator("#editor .cm-content");
-  await editor.fill("print('BROWSER_SMOKE_OK')");
+  await editor.fill("with open('result.txt', 'w', encoding='utf-8') as file:\n    file.write('persisted from Python')\nprint('BROWSER_SMOKE_OK')");
   await page.locator("#save-button").click();
   await page.locator("#run-button").click();
   await page.waitForFunction(() => document.querySelector("#output-text").textContent.includes("BROWSER_SMOKE_OK"));
+  await page.waitForFunction(() => document.querySelector("#stop-button").disabled);
 
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => document.querySelector("#runtime-state")?.classList.contains("ready"), undefined, { timeout: 120000 });
   const restoredCode = await page.locator("#editor .cm-content").innerText();
   assert.match(restoredCode, /BROWSER_SMOKE_OK/, "IndexedDB should restore the last saved source after reload.");
+  assert.ok(await page.locator("#file-list").getByText("result.txt").count(), "Python-created files should be saved back into the local project.");
 
   await page.locator("#editor .cm-content").fill('name = input("Your name: ")\nprint("HELLO " + name)');
   await page.locator("#save-button").click();
