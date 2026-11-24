@@ -43,6 +43,7 @@ try {
   const page = await context.newPage();
   page.setDefaultTimeout(45000);
   const pageErrors = [];
+  const consoleErrors = [];
   const interruptPageErrors = [];
   let stoppingPython = false;
   page.on("pageerror", (error) => {
@@ -51,6 +52,9 @@ try {
     } else {
       pageErrors.push(error.message);
     }
+  });
+  page.on("console", (message) => {
+    if (message.type() === "error") consoleErrors.push(message.text());
   });
 
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
@@ -62,7 +66,22 @@ try {
   await editor.fill("with open('result.txt', 'w', encoding='utf-8') as file:\n    file.write('persisted from Python')\nprint('BROWSER_SMOKE_OK')");
   await page.locator("#save-button").click();
   await page.locator("#run-button").click();
-  await page.waitForFunction(() => document.querySelector("#output-text").textContent.includes("BROWSER_SMOKE_OK"));
+  await page.waitForFunction(() => {
+    const output = document.querySelector("#output-text")?.textContent || "";
+    const errors = document.querySelector("#error-text")?.textContent || "";
+    return output.includes("BROWSER_SMOKE_OK") || errors.includes("Traceback") || errors.includes("Error:");
+  }, undefined, { timeout: 60000 });
+  const firstRunOutput = await page.locator("#output-text").innerText();
+  const firstRunError = await page.locator("#error-text").innerText();
+  assert.match(
+    firstRunOutput,
+    /BROWSER_SMOKE_OK/,
+    "Python execution failed. Output: " + firstRunOutput + " | Errors: " + firstRunError
+      + " | Status: " + await page.locator("#status-message").innerText()
+      + " | Runtime: " + await page.locator("#runtime-state").getAttribute("class")
+      + " | Page errors: " + pageErrors.join(" || ")
+      + " | Console errors: " + consoleErrors.join(" || "),
+  );
   await page.waitForFunction(() => document.querySelector("#stop-button").disabled);
 
   await page.reload({ waitUntil: "domcontentloaded" });
@@ -97,6 +116,7 @@ try {
   assert.equal(await page.locator("#file-sidebar").evaluate((element) => element.classList.contains("open")), false);
 
   assert.deepEqual(pageErrors, [], "The browser page should not throw unexpected JavaScript errors.");
+  assert.deepEqual(consoleErrors, [], "The browser console should not report unexpected errors.");
   assert.ok(
     interruptPageErrors.every((message) => message.includes("KeyboardInterrupt")),
     "Only the expected Python KeyboardInterrupt may surface while cancelling a running program.",
