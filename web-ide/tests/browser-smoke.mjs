@@ -27,7 +27,7 @@ async function waitForServer() {
     } catch {}
     await delay(250);
   }
-  throw new Error("Vite preview did not start.\\n" + serverOutput);
+  throw new Error("Vite preview did not start.\n" + serverOutput);
 }
 
 let browser;
@@ -63,7 +63,7 @@ try {
   assert.equal(isolated, true, "COOP/COEP headers must enable cross-origin isolation for interactive stdin and interrupts.");
 
   const editor = page.locator("#editor .cm-content");
-  await editor.fill("with open('result.txt', 'w', encoding='utf-8') as file:\\n    file.write('persisted from Python')\\nprint('BROWSER_SMOKE_OK')");
+  await editor.fill("with open('result.txt', 'w', encoding='utf-8') as file:\n    file.write('persisted from Python')\nprint('BROWSER_SMOKE_OK')");
   await page.locator("#save-button").click();
   await page.locator("#run-button").click();
   await page.waitForFunction(() => {
@@ -90,7 +90,7 @@ try {
   assert.match(restoredCode, /BROWSER_SMOKE_OK/, "IndexedDB should restore the last saved source after reload.");
   assert.ok(await page.locator("#file-list").getByText("result.txt").count(), "Python-created files should be saved back into the local project.");
 
-  await page.locator("#editor .cm-content").fill('name = input("Your name: ")\\nprint("HELLO " + name)');
+  await page.locator("#editor .cm-content").fill('name = input("Your name: ")\nprint("HELLO " + name)');
   await page.locator("#save-button").click();
   await page.locator("#run-button").click();
   await page.locator("#stdin-form").waitFor({ state: "visible" });
@@ -98,11 +98,11 @@ try {
   await page.locator("#stdin-form button").click();
   await page.waitForFunction(() => document.querySelector("#output-text").textContent.includes("HELLO Python Studio"));
 
-  await page.locator("#editor .cm-content").fill("def broken(:\\n    pass");
+  await page.locator("#editor .cm-content").fill("def broken(:\n    pass");
   await page.locator("#run-button").click();
   await page.waitForFunction(() => document.querySelector("#error-text").textContent.includes("SyntaxError"));
 
-  await page.locator("#editor .cm-content").fill("while True:\\n    pass");
+  await page.locator("#editor .cm-content").fill("while True:\n    pass");
   await page.locator("#run-button").click();
   await page.waitForFunction(() => !document.querySelector("#stop-button").disabled);
   stoppingPython = true;
@@ -183,7 +183,7 @@ try {
   await page.locator("#file-picker").setInputFiles({
     name: "imported.py",
     mimeType: "text/x-python",
-    buffer: Buffer.from("print('IMPORTED_OK')\\n"),
+    buffer: Buffer.from("print('IMPORTED_OK')\n"),
   });
   await page.waitForFunction(() => Boolean(document.querySelector('#file-list button[data-path="imported.py"]')));
 
