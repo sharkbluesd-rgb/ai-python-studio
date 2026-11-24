@@ -27,6 +27,68 @@ function setProjectFiles(files, activeFile) {
   pyodide.globals.set("__file__", root + "/" + activeFile);
 }
 
+const TEXT_EXTENSIONS = new Set([
+  ".py", ".pyw", ".txt", ".json", ".csv", ".md", ".toml", ".ini",
+  ".yaml", ".yml", ".html", ".css", ".js", ".xml", ".sql", ".sh",
+  ".cfg", ".rst",
+]);
+const MAX_SNAPSHOT_FILES = 300;
+const MAX_SNAPSHOT_FILE_BYTES = 512 * 1024;
+const MAX_SNAPSHOT_BYTES = 12 * 1024 * 1024;
+const SKIPPED_DIRECTORIES = new Set([".git", ".venv", "venv", "node_modules", "__pycache__"]);
+
+function collectProjectSnapshot() {
+  const root = "/home/pyodide/project";
+  const files = {};
+  const folders = [];
+  const decoder = new TextDecoder("utf-8", { fatal: true });
+  let totalBytes = 0;
+  let ignoredFiles = 0;
+
+  function walk(absoluteDirectory, relativeDirectory) {
+    for (const name of pyodide.FS.readdir(absoluteDirectory)) {
+      if (name === "." || name === ".." || SKIPPED_DIRECTORIES.has(name.toLowerCase())) continue;
+      const relativePath = relativeDirectory ? relativeDirectory + "/" + name : name;
+      if (relativePath.startsWith("/") || relativePath.includes("\\")
+        || relativePath.split("/").some((part) => !part || part === "." || part === "..")) {
+        ignoredFiles += 1;
+        continue;
+      }
+      const absolutePath = absoluteDirectory + "/" + name;
+      const stat = pyodide.FS.lstat(absolutePath);
+      if (pyodide.FS.isLink(stat.mode)) {
+        ignoredFiles += 1;
+        continue;
+      }
+      if (pyodide.FS.isDir(stat.mode)) {
+        folders.push(relativePath);
+        walk(absolutePath, relativePath);
+        continue;
+      }
+
+      const dot = name.lastIndexOf(".");
+      const extension = dot >= 0 ? name.slice(dot).toLowerCase() : "";
+      if (!TEXT_EXTENSIONS.has(extension)
+        || stat.size > MAX_SNAPSHOT_FILE_BYTES
+        || Object.keys(files).length >= MAX_SNAPSHOT_FILES
+        || totalBytes + stat.size > MAX_SNAPSHOT_BYTES) {
+        ignoredFiles += 1;
+        continue;
+      }
+      try {
+        const content = decoder.decode(pyodide.FS.readFile(absolutePath));
+        files[relativePath] = content;
+        totalBytes += stat.size;
+      } catch {
+        ignoredFiles += 1;
+      }
+    }
+  }
+
+  walk(root, "");
+  return { files, folders, ignoredFiles, totalBytes };
+}
+
 function configureInput(shared) {
   if (!shared?.control || !shared?.bytes || !shared?.interrupt) {
     pyodide.setStdin({ error: true });
@@ -78,21 +140,37 @@ async function initialize(message) {
 async function execute(message) {
   activeRunId = message.id;
   const start = performance.now();
+  let success = true;
+  let errorText = "";
+  let filesSnapshot = null;
   send("run-started", { id: activeRunId });
   try {
     setProjectFiles(message.files, message.activeFile);
+    pyodide.globals.set("__name__", "__main__");
     await pyodide.runPythonAsync(message.code);
-    send("run-finished", { id: activeRunId, success: true, durationMs: Math.round(performance.now() - start) });
   } catch (error) {
-    const text = String(error?.message || error);
-    send("stderr", { text: text.endsWith("\n") ? text : text + "\n" });
-    send("run-finished", { id: activeRunId, success: false, durationMs: Math.round(performance.now() - start), error: text });
-  } finally {
-    try { pyodide.globals.delete("__file__"); } catch {}
-    activeRunId = null;
+    success = false;
+    errorText = String(error?.message || error);
+    send("stderr", { text: errorText.endsWith("\n") ? errorText : errorText + "\n" });
   }
-}
 
+  try {
+    filesSnapshot = collectProjectSnapshot();
+  } catch (error) {
+    send("stderr", { text: "تعذر حفظ تغييرات ملفات Python: " + String(error?.message || error) + "\n" });
+  }
+
+  send("run-finished", {
+    id: activeRunId,
+    projectId: message.projectId,
+    success,
+    durationMs: Math.round(performance.now() - start),
+    error: errorText || undefined,
+    filesSnapshot,
+  });
+  try { pyodide.globals.delete("__file__"); } catch {}
+  activeRunId = null;
+}
 async function installPackage(message) {
   try {
     send("package-progress", { id: message.id, text: "تحميل micropip..." });
