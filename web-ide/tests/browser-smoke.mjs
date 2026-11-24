@@ -61,7 +61,7 @@ try {
   const restoredCode = await page.locator("#editor .cm-content").innerText();
   assert.match(restoredCode, /BROWSER_SMOKE_OK/, "IndexedDB should restore the last saved source after reload.");
 
-  await page.locator("#editor .cm-content").fill('name = input("Your name: ")\\nprint("HELLO " + name)');
+  await page.locator("#editor .cm-content").fill('name = input("Your name: ")\nprint("HELLO " + name)');
   await page.locator("#save-button").click();
   await page.locator("#run-button").click();
   await page.locator("#stdin-form").waitFor({ state: "visible" });
@@ -69,15 +69,15 @@ try {
   await page.locator("#stdin-form button").click();
   await page.waitForFunction(() => document.querySelector("#output-text").textContent.includes("HELLO Python Studio"));
 
-  await page.locator("#editor .cm-content").fill("def broken(:\\n    pass");
+  await page.locator("#editor .cm-content").fill("def broken(:\n    pass");
   await page.locator("#run-button").click();
   await page.waitForFunction(() => document.querySelector("#error-text").textContent.includes("SyntaxError"));
 
-  await page.locator("#editor .cm-content").fill("while True:\\n    pass");
+  await page.locator("#editor .cm-content").fill("while True:\n    pass");
   await page.locator("#run-button").click();
   await page.waitForFunction(() => !document.querySelector("#stop-button").disabled);
   await page.locator("#stop-button").click();
-  await page.waitForFunction(() => document.querySelector("#stop-button").disabled, { timeout: 15000 });
+  await page.waitForFunction(() => document.querySelector("#stop-button").disabled, undefined, { timeout: 15000 });
   assert.match(await page.locator("#error-text").innerText(), /KeyboardInterrupt|تم إيقاف|Execution interrupted/i);
 
   await page.locator("#sidebar-toggle").click();
