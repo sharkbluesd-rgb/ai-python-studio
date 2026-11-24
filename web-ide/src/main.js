@@ -18,7 +18,7 @@ import "./style.css";
 const $ = (id) => document.getElementById(id);
 const state = {
   project: null, currentPath: "main.py", openTabs: [], saveTimer: null,
-  lightTheme: false, virtualCtrl: false, virtualShift: false,
+  lightTheme: false, virtualCtrl: false, virtualShift: false, collapsedFolders: new Set(),
   isRunning: false, activePanel: "output", runSequence: 0, runtimeReady: false,
 };
 const themeCompartment = new Compartment();
@@ -59,13 +59,14 @@ async function saveNow() {
   } catch (error) {
     setStatus("تعذر الحفظ: " + error.message);
     toast(error.message, "error");
+    throw error;
   }
 }
 function scheduleSave() {
   $("save-button").classList.add("unsaved");
   setStatus("تغييرات غير محفوظة…");
   clearTimeout(state.saveTimer);
-  state.saveTimer = setTimeout(() => saveNow(), 450);
+  state.saveTimer = setTimeout(() => { saveNow().catch(() => {}); }, 450);
 }
 function openFile(path) {
   const safePath = normalizeProjectPath(path);
@@ -105,27 +106,45 @@ function renderFiles() {
   const items = [
     ...Array.from(directories).map((path) => ({ path, folder: true })),
     ...Object.keys(state.project.files).map((path) => ({ path, folder: false })),
-  ].sort((a, b) => a.path.localeCompare(b.path));
+  ].sort((a, b) => a.path.localeCompare(b.path) || Number(b.folder) - Number(a.folder));
+
   $("file-count").textContent = Object.keys(state.project.files).length;
   for (const item of items) {
+    const parts = item.path.split("/");
+    const hiddenByAncestor = parts.slice(0, -1).some((_, index) =>
+      state.collapsedFolders.has(parts.slice(0, index + 1).join("/"))
+    );
+    if (hiddenByAncestor) continue;
+
     const button = document.createElement("button");
-    button.className = "tree-item " + (item.folder ? "folder-item" : "file-item") + (item.path === state.currentPath ? " active" : "");
-    button.style.setProperty("--depth", String(item.path.split("/").length - 1));
+    button.className = "tree-item " + (item.folder ? "folder-item" : "file-item")
+      + (item.path === state.currentPath ? " active" : "");
+    button.style.setProperty("--depth", String(parts.length - 1));
+    button.dataset.path = item.path;
     const icon = document.createElement("span");
     icon.className = "tree-icon";
-    icon.textContent = item.folder ? "▸" : item.path.endsWith(".py") ? "Py" : "•";
+    icon.textContent = item.folder
+      ? (state.collapsedFolders.has(item.path) ? "▸" : "▾")
+      : item.path.toLowerCase().endsWith(".py") ? "Py" : "•";
     const label = document.createElement("span");
     label.textContent = basename(item.path);
     button.append(icon, label);
+
     if (item.folder) {
+      button.setAttribute("aria-expanded", String(!state.collapsedFolders.has(item.path)));
       button.addEventListener("click", () => {
-        const child = nav.querySelector('[data-folder="' + CSS.escape(item.path) + '"]');
-        child?.classList.toggle("hidden");
+        if (state.collapsedFolders.has(item.path)) state.collapsedFolders.delete(item.path);
+        else state.collapsedFolders.add(item.path);
+        renderFiles();
       });
-      button.dataset.folder = item.path;
     } else {
       button.addEventListener("click", () => {
-        try { openFile(item.path); closeSidebarOnMobile(); } catch (error) { toast(error.message, "error"); }
+        try {
+          openFile(item.path);
+          closeSidebarOnMobile();
+        } catch (error) {
+          toast(error.message, "error");
+        }
       });
     }
     nav.append(button);
@@ -155,16 +174,21 @@ function closeTab(path) {
   const index = state.openTabs.indexOf(path);
   if (index < 0) return;
   state.openTabs.splice(index, 1);
-  if (state.openTabs.length === 0) { state.openTabs.push(path); renderTabs(); return; }
   if (state.currentPath === path) {
-    if (state.openTabs.length) openFile(state.openTabs[Math.max(0, index - 1)]);
-    else {
+    if (state.openTabs.length) {
+      openFile(state.openTabs[Math.min(index, state.openTabs.length - 1)]);
+    } else {
       state.currentPath = "";
-      editorView.dispatch({ changes: { from: 0, to: editorView.state.doc.length, insert: "" } });
+      editorView.dispatch({
+        changes: { from: 0, to: editorView.state.doc.length, insert: "" },
+        selection: { anchor: 0 },
+      });
       $("active-filename").textContent = "لا يوجد ملف";
+      $("project-breadcrumb").textContent = state.project.name;
     }
   }
   renderTabs();
+  renderFiles();
 }
 function updateCursor() {
   if (!editorView) return;
@@ -207,7 +231,7 @@ function setupEditor() {
         ".cm-gutters": { minWidth: "42px" },
       }),
       EditorView.updateListener.of((update) => {
-        if (update.docChanged) {
+        if (update.docChanged && state.currentPath) {
           state.project.files[state.currentPath] = update.state.doc.toString();
           scheduleSave();
         }
@@ -251,6 +275,7 @@ async function switchProject(projectId) {
 async function newProject() {
   const name = prompt("اسم المشروع الجديد:");
   if (!name) return;
+  await saveNow();
   const project = await createProject(name);
   state.project = project;
   state.currentPath = "main.py";
@@ -350,23 +375,40 @@ async function deleteCurrentFile() {
   renderFiles(); renderTabs(); updateFileHeading();
 }
 async function importFiles(fileList) {
-  let added = 0;
+  await saveNow();
+  const additions = [];
+  const nextFolders = new Set(state.project.folders || []);
+
   for (const file of Array.from(fileList)) {
     const path = file.webkitRelativePath || file.name;
+    const safe = validateTextFile(path, "");
+    if (file.size > 512 * 1024) throw new Error("حجم الملف يتجاوز 512 KB: " + safe);
     const text = await file.text();
-    const safe = validateTextFile(path, text);
+    validateTextFile(safe, text);
     if (Object.hasOwn(state.project.files, safe) && !confirm("استبدال الملف " + safe + "؟")) continue;
-    state.project.files[safe] = text;
-    const parent = dirname(safe);
-    if (parent && !state.project.folders.includes(parent)) state.project.folders.push(parent);
-    added += 1;
+    additions.push([safe, text]);
+    const parentParts = safe.split("/");
+    parentParts.pop();
+    for (let i = 1; i <= parentParts.length; i += 1) {
+      nextFolders.add(parentParts.slice(0, i).join("/"));
+    }
   }
-  await saveNow();
+  if (!additions.length) return;
+
+  const nextFiles = { ...state.project.files };
+  for (const [path, text] of additions) nextFiles[path] = text;
+  state.project = await saveProject({
+    ...state.project,
+    files: nextFiles,
+    folders: Array.from(nextFolders),
+  });
   renderFiles();
-  if (added) toast("تم استيراد " + added + " ملف.", "success");
+  if (additions.some(([path]) => path === state.currentPath)) openFile(state.currentPath);
+  toast("تم استيراد " + additions.length + " ملف.", "success");
 }
 async function importZip(file) {
   if (!file) return;
+  await saveNow();
   if (file.size > 10 * 1024 * 1024) throw new Error("حجم ZIP يتجاوز 10 MB.");
   const archiveBytes = new Uint8Array(await file.arrayBuffer());
   const manifest = inspectZipArchive(archiveBytes);
@@ -407,9 +449,9 @@ async function importZip(file) {
   if (!Object.keys(imported).length) throw new Error("لم يتم العثور على ملفات نصية مدعومة داخل ZIP.");
   const replace = Object.keys(imported).some((path) => Object.hasOwn(state.project.files, path));
   if (replace && !confirm("توجد ملفات بنفس الأسماء. هل تريد استبدالها؟")) return;
-  Object.assign(state.project.files, imported);
-  state.project.folders = Array.from(new Set([...(state.project.folders || []), ...folders]));
-  await saveNow();
+  const nextFiles = { ...state.project.files, ...imported };
+  const nextFolders = Array.from(new Set([...(state.project.folders || []), ...folders]));
+  state.project = await saveProject({ ...state.project, files: nextFiles, folders: nextFolders });
   renderFiles();
   const firstPython = Object.keys(imported).find((path) => path.endsWith(".py")) || Object.keys(imported)[0];
   openFile(firstPython);
@@ -680,7 +722,7 @@ function bindEvents() {
   $("import-zip").addEventListener("click", () => $("zip-picker").click());
   $("zip-picker").addEventListener("change", (event) => importZip(event.target.files[0]).catch((error) => toast(error.message, "error")).finally(() => { event.target.value = ""; }));
   $("export-zip").addEventListener("click", () => exportZip());
-  $("save-button").addEventListener("click", () => saveNow());
+  $("save-button").addEventListener("click", () => saveNow().catch(() => {}));
   $("run-button").addEventListener("click", () => runCurrentFile().catch((error) => toast(error.message, "error")));
   $("stop-button").addEventListener("click", () => runtime.stop());
   $("search-button").addEventListener("click", () => openSearchPanel(editorView));
