@@ -495,11 +495,58 @@ function exportZip() {
   downloadBlob(new Blob([archive], { type: "application/zip" }), state.project.name.replace(/[^a-z0-9_-]/gi, "_") + ".zip");
   toast("تم تجهيز ملف ZIP للتنزيل.", "success");
 }
+async function persistRuntimeSnapshot(message) {
+  if (!message.filesSnapshot || !message.projectId) return;
+  const project = await getProject(message.projectId);
+  if (!project) return;
+  const files = { ...message.filesSnapshot.files };
+  if (!Object.keys(files).length) files["main.py"] = "";
+  const saved = await saveProject({
+    ...project,
+    files,
+    folders: message.filesSnapshot.folders || [],
+  });
+
+  if (state.project?.id === message.projectId) {
+    state.project = saved;
+    state.openTabs = state.openTabs.filter((path) => Object.hasOwn(saved.files, path));
+    if (!Object.hasOwn(saved.files, state.currentPath)) {
+      state.currentPath = state.openTabs[0] || Object.keys(saved.files)[0] || "main.py";
+      if (!state.openTabs.includes(state.currentPath)) state.openTabs.push(state.currentPath);
+    }
+    const nextText = saved.files[state.currentPath] || "";
+    if (editorView.state.doc.toString() !== nextText) {
+      editorView.dispatch({
+        changes: { from: 0, to: editorView.state.doc.length, insert: nextText },
+        selection: { anchor: 0 },
+      });
+    }
+    renderFiles();
+    renderTabs();
+    updateFileHeading();
+  }
+  if (message.filesSnapshot.ignoredFiles > 0) {
+    appendText($("output-text"), "\n[تنبيه] تم تجاهل " + message.filesSnapshot.ignoredFiles
+      + " ملفاً غير مدعوم أو تجاوز حدود التخزين.\n");
+  }
+}
 function setRunning(running) {
   state.isRunning = running;
   $("run-button").disabled = running;
   $("stop-button").disabled = !running;
   $("runtime-state").classList.toggle("busy", running);
+  $("project-select").disabled = running;
+  for (const id of [
+    "new-project", "rename-project", "delete-project", "new-file", "new-folder",
+    "import-files", "rename-file", "duplicate-file", "delete-file", "import-zip",
+    "export-zip", "package-install-button", "package-input",
+  ]) {
+    const control = $(id);
+    if (control) control.disabled = running;
+  }
+  $("file-list").querySelectorAll("button").forEach((button) => { button.disabled = running; });
+  $("editor-tabs").querySelectorAll("button").forEach((button) => { button.disabled = running; });
+  if (editorView) editorView.contentDOM.contentEditable = String(!running);
 }
 async function runCurrentFile() {
   if (!state.currentPath) { toast("أنشئ ملف Python أولاً.", "error"); return; }
@@ -518,7 +565,13 @@ async function runCurrentFile() {
   const code = editorView.state.doc.toString();
   const id = ++state.runSequence;
   try {
-    await runtime.run({ id, code, files: { ...state.project.files }, activeFile: state.currentPath });
+    await runtime.run({
+      id,
+      projectId: state.project.id,
+      code,
+      files: { ...state.project.files },
+      activeFile: state.currentPath,
+    });
   } catch (error) {
     setRunning(false);
     $("run-duration").textContent = "تعذر التشغيل";
@@ -558,14 +611,26 @@ function handleRuntimeMessage(message) {
     setRunning(true);
   } else if (message.type === "run-finished") {
     runtime.markRunFinished();
-    setRunning(false);
     $("stdin-form").classList.add("hidden");
     $("run-duration").textContent = message.durationMs + " ms";
     if (!message.success) {
       addRuntimeError("");
       setPanel("errors");
     }
-    setStatus(message.success ? "اكتمل التنفيذ بنجاح" : "انتهى التنفيذ مع خطأ");
+    const finishRun = () => {
+      setRunning(false);
+      setStatus(message.success ? "اكتمل التنفيذ وحُفظت تغييرات الملفات" : "انتهى التنفيذ مع خطأ");
+    };
+    if (message.filesSnapshot && message.projectId) {
+      persistRuntimeSnapshot(message)
+        .catch((error) => {
+          appendText($("error-text"), "\nتعذر حفظ ملفات Python: " + error.message + "\n");
+          toast("تعذر حفظ تغييرات ملفات Python: " + error.message, "error");
+        })
+        .finally(finishRun);
+    } else {
+      finishRun();
+    }
   } else if (message.type === "stdin-request") {
     setPanel("terminal");
     $("stdin-form").classList.remove("hidden");
