@@ -1,5 +1,5 @@
 const CACHE_NAME = "python-studio-mobile-v1";
-const PYODIDE_PREFIX = "/pyodide/v314.0.7/full/";
+const PYODIDE_PREFIX = "/pyodide/v314.0.8/full/";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
