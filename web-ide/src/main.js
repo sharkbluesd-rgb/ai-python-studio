@@ -611,6 +611,7 @@ function handleRuntimeMessage(message) {
     setRunning(true);
   } else if (message.type === "run-finished") {
     runtime.markRunFinished();
+    $("stop-button").disabled = true;
     $("stdin-form").classList.add("hidden");
     $("run-duration").textContent = message.durationMs + " ms";
     if (!message.success) {
@@ -644,11 +645,16 @@ function handleRuntimeMessage(message) {
     $("runtime-state").classList.remove("ready", "busy");
     $("runtime-state").classList.add("error");
     $("runtime-state").querySelector("span").textContent = "خطأ في Python";
+    $("python-version").textContent = "Python غير متاح";
     setRunning(false);
     $("stdin-form").classList.add("hidden");
     addRuntimeError(message.message || "خطأ في بيئة التشغيل.");
   } else if (message.type === "worker-terminated") {
+    state.runtimeReady = false;
+    $("runtime-state").classList.remove("ready", "busy");
+    $("runtime-state").querySelector("span").textContent = "Python متوقف";
     $("run-duration").textContent = "تم الإيقاف";
+    $("python-version").textContent = "سيُعاد التحميل عند التشغيل";
     setRunning(false);
     $("stdin-form").classList.add("hidden");
     setStatus(message.text);
@@ -676,6 +682,7 @@ async function restartPythonRuntime() {
     toast(error.message, "error");
   } finally {
     button.disabled = false;
+    setRunning(false);
   }
 }
 function renderPackages(packages) {
