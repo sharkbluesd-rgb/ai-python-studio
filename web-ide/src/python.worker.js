@@ -13,7 +13,7 @@ function send(type, payload = {}) { self.postMessage({ type, ...payload }); }
 
 function setProjectFiles(files, activeFile) {
   const root = "/home/pyodide/project";
-  pyodide.FS.mkdirTree(root);
+  pyodide.runPython("import os, shutil\nshutil.rmtree('/home/pyodide/project', ignore_errors=True)\nos.makedirs('/home/pyodide/project', exist_ok=True)\n");
   for (const [relativePath, content] of Object.entries(files || {})) {
     const path = String(relativePath);
     if (path.startsWith("/") || path.includes("\\") || path.split("/").some((part) => part === ".." || !part)) {
