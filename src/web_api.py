@@ -18,9 +18,8 @@ import time
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, Response, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from flet_project import configure_flet_project, validate_flet_project
@@ -560,12 +559,10 @@ async def download_apk(request: Request) -> Response:
         if run.get("status") != "completed" or run.get("conclusion") != "success":
             raise HTTPException(status_code=409, detail="لا يمكن تنزيل APK قبل نجاح البناء.")
         artifacts = await asyncio.to_thread(client.list_artifacts, owner, repository, run_id)
+        candidates = [item for item in artifacts if not item.get("expired")]
         artifact = next(
-            (
-                item for item in artifacts
-                if item.get("name") == "flet-apk" and not item.get("expired")
-            ),
-            None,
+            (item for item in candidates if item.get("name") == "flet-apk"),
+            candidates[0] if len(candidates) == 1 else None,
         )
         if not artifact:
             raise HTTPException(status_code=404, detail="لم يتم العثور على ملف APK صالح ضمن مخرجات البناء.")
