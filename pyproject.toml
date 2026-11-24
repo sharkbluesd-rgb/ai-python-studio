@@ -1,7 +1,7 @@
 [project]
-name = "flet-apk-studio"
+name = "ai-python-studio"
 version = "2.0.0"
-description = "Mobile-first builder for Python Flet Android APKs"
+description = "Mobile-first local Python IDE with cloud APK build integration"
 requires-python = ">=3.10"
 dependencies = [
     "flet==1.1.2",
@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [tool.flet]
-product = "Flet APK Studio"
+product = "AI Python Studio"
 org = "com.aipythonstudio"
 
 [tool.flet.app]
