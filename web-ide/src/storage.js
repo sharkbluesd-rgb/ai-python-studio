@@ -7,7 +7,11 @@ export const MAX_PROJECT_BYTES = 12 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = new Set([
   ".py", ".pyw", ".txt", ".json", ".csv", ".md", ".toml", ".ini",
   ".yaml", ".yml", ".html", ".css", ".js", ".xml", ".sql", ".sh",
-  ".cfg", ".rst",
+  ".cfg", ".rst", ".lock",
+]);
+const ALLOWED_FILENAMES = new Set([
+  ".gitignore", ".dockerignore", ".editorconfig", ".python-version",
+  ".flake8", "dockerfile", "makefile", "procfile", "pipfile",
 ]);
 let databasePromise;
 
@@ -80,7 +84,7 @@ export function validateTextFile(path, content) {
   const filename = safePath.split("/").at(-1);
   const dot = filename.lastIndexOf(".");
   const extension = dot >= 0 ? filename.slice(dot).toLowerCase() : "";
-  if (!ALLOWED_EXTENSIONS.has(extension)) {
+  if (!ALLOWED_EXTENSIONS.has(extension) && !ALLOWED_FILENAMES.has(filename.toLowerCase())) {
     throw new Error("امتداد الملف غير مدعوم: " + (extension || "بدون امتداد"));
   }
   if (typeof content !== "string") throw new Error("محتوى الملف يجب أن يكون نصاً.");
