@@ -6,7 +6,8 @@ import { Compartment } from "@codemirror/state";
 import { keymap } from "@codemirror/view";
 import { openSearchPanel } from "@codemirror/search";
 import { oneDark } from "@codemirror/theme-one-dark";
-import { zipSync, unzipSync, strFromU8, strToU8 } from "fflate";
+import { zipSync, unzipSync, strToU8 } from "fflate";
+import { inspectZipArchive } from "./zip-safety.js";
 import {
   createProject, deleteProject, ensureStarterProject, getProject, listProjects,
   normalizeProjectPath, renameProject, saveProject, validateTextFile,
@@ -367,24 +368,42 @@ async function importFiles(fileList) {
 async function importZip(file) {
   if (!file) return;
   if (file.size > 10 * 1024 * 1024) throw new Error("حجم ZIP يتجاوز 10 MB.");
-  const archive = unzipSync(new Uint8Array(await file.arrayBuffer()));
-  const entries = Object.entries(archive);
-  if (entries.length > 300) throw new Error("عدد عناصر ZIP يتجاوز 300.");
+  const archiveBytes = new Uint8Array(await file.arrayBuffer());
+  const manifest = inspectZipArchive(archiveBytes);
+  const manifestByPath = new Map(manifest.map((entry) => [entry.path, entry]));
+  const archive = unzipSync(archiveBytes);
   const imported = {};
   const folders = new Set();
   let totalBytes = 0;
-  for (const [rawPath, bytes] of entries) {
+
+  for (const [rawPath, bytes] of Object.entries(archive)) {
     const isFolder = rawPath.endsWith("/");
     const trimmed = isFolder ? rawPath.slice(0, -1) : rawPath;
-    if (!trimmed || trimmed.startsWith("__MACOSX/") || trimmed.split("/").includes("__MACOSX")) continue;
+    if (!trimmed || trimmed === "__MACOSX" || trimmed.startsWith("__MACOSX/")) continue;
     const safe = normalizeProjectPath(trimmed);
-    if (isFolder) { folders.add(safe); continue; }
-    const text = strFromU8(bytes);
-    validateTextFile(safe, text);
+    const metadata = manifestByPath.get(safe);
+    if (!metadata || metadata.isDirectory !== isFolder) {
+      throw new Error("محتوى ZIP لا يطابق دليل الملفات: " + safe);
+    }
+    if (isFolder) {
+      folders.add(safe);
+      continue;
+    }
+    if (bytes.byteLength !== metadata.uncompressedSize) {
+      throw new Error("حجم الملف بعد فك الضغط لا يطابق بيانات ZIP: " + safe);
+    }
     totalBytes += bytes.byteLength;
     if (totalBytes > 12 * 1024 * 1024) throw new Error("حجم الملفات بعد فك الضغط يتجاوز 12 MB.");
+    let text;
+    try {
+      text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    } catch {
+      throw new Error("الملف ليس نص UTF-8 صالحاً: " + safe);
+    }
+    validateTextFile(safe, text);
     imported[safe] = text;
   }
+
   if (!Object.keys(imported).length) throw new Error("لم يتم العثور على ملفات نصية مدعومة داخل ZIP.");
   const replace = Object.keys(imported).some((path) => Object.hasOwn(state.project.files, path));
   if (replace && !confirm("توجد ملفات بنفس الأسماء. هل تريد استبدالها؟")) return;
