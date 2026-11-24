@@ -10,7 +10,7 @@ The browser-first IDE is a standalone static application. It does not send Pytho
 - fflate imports and exports project ZIP files.
 - The runtime is exposed through \`PyodideRuntimeAdapter\`, so a future Android-native runtime can implement the same interface without replacing the editor or project model.
 
-The Python engine is pinned to the \`pyodide\` npm package version 314.0.7. Runtime core and standard-library assets are copied into the static build. Extra Pyodide wheels and micropip packages are downloaded from the matching jsDelivr distribution when requested.
+The Python engine is pinned to the \`pyodide\` npm package version 314.0.8. Runtime core and standard-library assets are copied into the static build. Extra Pyodide wheels and micropip packages are downloaded from the matching jsDelivr distribution when requested.
 
 ## Browser constraints
 
