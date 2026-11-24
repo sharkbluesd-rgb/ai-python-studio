@@ -43,13 +43,19 @@ function setPanel(name) {
   $("bottom-panel").classList.remove("collapsed");
 }
 function appendText(element, text) {
-  element.textContent += String(text);
+  const maxChars = 250000;
+  const next = element.textContent + String(text);
+  element.textContent = next.length > maxChars
+    ? "[تم اختصار المخرجات القديمة للحفاظ على أداء المحرر]\n" + next.slice(-maxChars)
+    : next;
   element.scrollTop = element.scrollHeight;
 }
 function basename(path) { return path.split("/").at(-1) || path; }
 function dirname(path) { const parts = path.split("/"); parts.pop(); return parts.join("/"); }
 
 async function saveNow() {
+  clearTimeout(state.saveTimer);
+  state.saveTimer = null;
   if (!state.project || !editorView) return;
   if (state.currentPath) state.project.files[state.currentPath] = editorView.state.doc.toString();
   try {
@@ -290,21 +296,27 @@ async function newProject() {
 async function newFile() {
   const path = prompt("مسار الملف الجديد، مثال: main.py أو utils/helpers.py");
   if (!path) return;
+  await saveNow();
   const safe = validateTextFile(path, "");
   if (Object.hasOwn(state.project.files, safe)) throw new Error("يوجد ملف بهذا المسار بالفعل.");
-  state.project.files[safe] = "";
-  const parent = dirname(safe);
-  if (parent && !state.project.folders.includes(parent)) state.project.folders.push(parent);
-  await saveNow();
+  const nextFiles = { ...state.project.files, [safe]: "" };
+  const nextFolders = new Set(state.project.folders || []);
+  const parentParts = safe.split("/");
+  parentParts.pop();
+  for (let i = 1; i <= parentParts.length; i += 1) nextFolders.add(parentParts.slice(0, i).join("/"));
+  state.project = await saveProject({ ...state.project, files: nextFiles, folders: Array.from(nextFolders) });
   openFile(safe);
 }
 async function newFolder() {
   const path = prompt("اسم المجلد أو مساره:");
   if (!path) return;
+  await saveNow();
   const safe = normalizeProjectPath(path);
-  if (state.project.folders.includes(safe)) throw new Error("المجلد موجود بالفعل.");
-  state.project.folders.push(safe);
-  await saveProject(state.project);
+  if ((state.project.folders || []).includes(safe)) throw new Error("المجلد موجود بالفعل.");
+  const nextFolders = new Set(state.project.folders || []);
+  const parts = safe.split("/");
+  for (let i = 1; i <= parts.length; i += 1) nextFolders.add(parts.slice(0, i).join("/"));
+  state.project = await saveProject({ ...state.project, folders: Array.from(nextFolders) });
   renderFiles();
   toast("تم إنشاء المجلد.", "success");
 }
@@ -312,13 +324,18 @@ async function renameCurrentFile() {
   if (!state.currentPath) return;
   const newPath = prompt("المسار الجديد للملف:", state.currentPath);
   if (!newPath || newPath === state.currentPath) return;
+  await saveNow();
   const safe = validateTextFile(newPath, state.project.files[state.currentPath]);
   if (Object.hasOwn(state.project.files, safe)) throw new Error("المسار الجديد مستخدم بالفعل.");
-  state.project.files[safe] = state.project.files[state.currentPath];
-  delete state.project.files[state.currentPath];
+  const nextFiles = { ...state.project.files, [safe]: state.project.files[state.currentPath] };
+  delete nextFiles[state.currentPath];
+  const nextFolders = new Set(state.project.folders || []);
+  const parentParts = safe.split("/");
+  parentParts.pop();
+  for (let i = 1; i <= parentParts.length; i += 1) nextFolders.add(parentParts.slice(0, i).join("/"));
+  state.project = await saveProject({ ...state.project, files: nextFiles, folders: Array.from(nextFolders) });
   state.openTabs = state.openTabs.map((path) => path === state.currentPath ? safe : path);
   state.currentPath = safe;
-  await saveNow();
   renderFiles(); renderTabs(); updateFileHeading();
 }
 async function duplicateCurrentFile() {
@@ -326,10 +343,15 @@ async function duplicateCurrentFile() {
   const suggested = state.currentPath.replace(/(\\.[^./]+)?$/, "_copy$1");
   const target = prompt("مسار النسخة الجديدة:", suggested);
   if (!target) return;
-  const safe = validateTextFile(target, editorView.state.doc.toString());
-  if (Object.hasOwn(state.project.files, safe)) throw new Error("المسار مستخدم بالفعل.");
-  state.project.files[safe] = editorView.state.doc.toString();
   await saveNow();
+  const safe = validateTextFile(target, state.project.files[state.currentPath]);
+  if (Object.hasOwn(state.project.files, safe)) throw new Error("المسار مستخدم بالفعل.");
+  const nextFiles = { ...state.project.files, [safe]: state.project.files[state.currentPath] };
+  const nextFolders = new Set(state.project.folders || []);
+  const parentParts = safe.split("/");
+  parentParts.pop();
+  for (let i = 1; i <= parentParts.length; i += 1) nextFolders.add(parentParts.slice(0, i).join("/"));
+  state.project = await saveProject({ ...state.project, files: nextFiles, folders: Array.from(nextFolders) });
   renderFiles();
   openFile(safe);
 }
@@ -358,21 +380,23 @@ async function deleteProjectAction() {
 async function deleteCurrentFile() {
   if (!state.currentPath) return;
   if (!confirm("حذف الملف " + state.currentPath + "؟ لا يمكن التراجع عن الحذف.")) return;
-  delete state.project.files[state.currentPath];
-  state.openTabs = state.openTabs.filter((path) => path !== state.currentPath);
-  const next = Object.keys(state.project.files)[0];
-  if (next) {
-    state.currentPath = next;
-    if (!state.openTabs.includes(next)) state.openTabs.push(next);
-    editorView.dispatch({ changes: { from: 0, to: editorView.state.doc.length, insert: state.project.files[next] } });
-  } else {
-    state.project.files["main.py"] = "";
-    state.currentPath = "main.py";
-    state.openTabs = ["main.py"];
-    editorView.dispatch({ changes: { from: 0, to: editorView.state.doc.length, insert: "" } });
-  }
   await saveNow();
-  renderFiles(); renderTabs(); updateFileHeading();
+  const deletedPath = state.currentPath;
+  const nextFiles = { ...state.project.files };
+  delete nextFiles[deletedPath];
+  if (!Object.keys(nextFiles).length) nextFiles["main.py"] = "";
+  state.project = await saveProject({ ...state.project, files: nextFiles });
+  state.openTabs = state.openTabs.filter((path) => path !== deletedPath);
+  state.currentPath = state.openTabs.find((path) => Object.hasOwn(nextFiles, path))
+    || Object.keys(nextFiles)[0];
+  if (!state.openTabs.includes(state.currentPath)) state.openTabs.push(state.currentPath);
+  editorView.dispatch({
+    changes: { from: 0, to: editorView.state.doc.length, insert: nextFiles[state.currentPath] || "" },
+    selection: { anchor: 0 },
+  });
+  renderFiles();
+  renderTabs();
+  updateFileHeading();
 }
 async function importFiles(fileList) {
   await saveNow();
@@ -479,6 +503,10 @@ function setRunning(running) {
 }
 async function runCurrentFile() {
   if (!state.currentPath) { toast("أنشئ ملف Python أولاً.", "error"); return; }
+  if (!/\\.pyw?$/i.test(state.currentPath)) {
+    toast("يمكن تشغيل ملفات Python فقط (.py أو .pyw).", "error");
+    return;
+  }
   await saveNow();
   $("output-text").textContent = "";
   $("error-text").textContent = "لا توجد أخطاء في هذا التشغيل.";
@@ -531,6 +559,7 @@ function handleRuntimeMessage(message) {
   } else if (message.type === "run-finished") {
     runtime.markRunFinished();
     setRunning(false);
+    $("stdin-form").classList.add("hidden");
     $("run-duration").textContent = message.durationMs + " ms";
     if (!message.success) {
       addRuntimeError("");
@@ -768,7 +797,9 @@ function bindEvents() {
     if (row) { $("package-input").value = row.querySelector("strong").textContent; }
   });
   $("active-filename").addEventListener("dblclick", () => renameCurrentFile().catch((error) => toast(error.message, "error")));
-  document.addEventListener("visibilitychange", () => { if (document.hidden) saveNow(); });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) saveNow().catch(() => {});
+  });
   window.addEventListener("beforeunload", () => runtime.dispose());
 }
 
