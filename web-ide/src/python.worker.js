@@ -30,7 +30,11 @@ function setProjectFiles(files, activeFile) {
 const TEXT_EXTENSIONS = new Set([
   ".py", ".pyw", ".txt", ".json", ".csv", ".md", ".toml", ".ini",
   ".yaml", ".yml", ".html", ".css", ".js", ".xml", ".sql", ".sh",
-  ".cfg", ".rst",
+  ".cfg", ".rst", ".lock",
+]);
+const TEXT_FILENAMES = new Set([
+  ".gitignore", ".dockerignore", ".editorconfig", ".python-version",
+  ".flake8", "dockerfile", "makefile", "procfile", "pipfile",
 ]);
 const MAX_SNAPSHOT_FILES = 300;
 const MAX_SNAPSHOT_FILE_BYTES = 512 * 1024;
@@ -68,7 +72,7 @@ function collectProjectSnapshot() {
 
       const dot = name.lastIndexOf(".");
       const extension = dot >= 0 ? name.slice(dot).toLowerCase() : "";
-      if (!TEXT_EXTENSIONS.has(extension)
+      if ((!TEXT_EXTENSIONS.has(extension) && !TEXT_FILENAMES.has(name.toLowerCase()))
         || stat.size > MAX_SNAPSHOT_FILE_BYTES
         || Object.keys(files).length >= MAX_SNAPSHOT_FILES
         || totalBytes + stat.size > MAX_SNAPSHOT_BYTES) {
