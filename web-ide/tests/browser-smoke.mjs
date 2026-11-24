@@ -124,8 +124,8 @@ try {
 
   await page.locator("#search-button").click();
   await page.locator(".cm-search").waitFor({ state: "visible" });
-  await page.locator("#goto-button").click();
   await page.once("dialog", (dialog) => dialog.accept("1"));
+  await page.locator("#goto-button").click();
 
   await page.locator(".panel-tab[data-panel='terminal']").click();
   await page.locator("#terminal-input").fill("help");
@@ -140,7 +140,10 @@ try {
   await page.locator("#editor .cm-content").fill("value = 10");
   await page.locator('[data-key="("]').click();
   assert.match(await page.locator("#editor .cm-content").innerText(), /\(/, "Programmer keyboard buttons should insert characters into the editor.");
-  await page.locator("#font-size").fill("18");
+  await page.locator("#font-size").evaluate((element) => {
+    element.value = "18";
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+  });
 
   const promptQueue = [];
   page.on("dialog", async (dialog) => {
