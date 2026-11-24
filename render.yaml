@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: flet-apk-studio
+    runtime: python
+    plan: free
+    branch: feature/studio-2.0
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn web_api:app --app-dir src --host 0.0.0.0 --port $PORT --workers 1
+    healthCheckPath: /api/health
+    envVars:
+      - key: FLET_APK_STUDIO_SESSION_SECRET
+        generateValue: true
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: ENABLE_API_DOCS
+        value: "false"
