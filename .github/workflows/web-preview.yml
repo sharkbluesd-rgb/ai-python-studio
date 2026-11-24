@@ -80,7 +80,7 @@ jobs:
           assets = list(Path("web-ide/dist/assets").glob("*.js"))
           script = "\\n".join(path.read_text(encoding="utf-8") for path in assets)
           assert "PYTHON STUDIO MOBILE" in html
-          assert "PyodideRuntimeAdapter" in script
+          assert "crossOriginIsolated" in script
           assert "runPythonAsync" in script
           assert "indexedDB" in script
           print("Verified the bundled browser IDE and Pyodide worker.")
