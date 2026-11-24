@@ -419,4 +419,5 @@ def main(page: ft.Page):
     refresh_file_buttons()
 
 
-ft.run(main)
+if __name__ == "__main__":
+    ft.run(main)
