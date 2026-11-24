@@ -43,7 +43,15 @@ try {
   const page = await context.newPage();
   page.setDefaultTimeout(45000);
   const pageErrors = [];
-  page.on("pageerror", (error) => pageErrors.push(error.message));
+  const interruptPageErrors = [];
+  let stoppingPython = false;
+  page.on("pageerror", (error) => {
+    if (stoppingPython && /KeyboardInterrupt/.test(error.message)) {
+      interruptPageErrors.push(error.message);
+    } else {
+      pageErrors.push(error.message);
+    }
+  });
 
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => document.querySelector("#runtime-state")?.classList.contains("ready"), undefined, { timeout: 120000 });
@@ -76,6 +84,7 @@ try {
   await page.locator("#editor .cm-content").fill("while True:\n    pass");
   await page.locator("#run-button").click();
   await page.waitForFunction(() => !document.querySelector("#stop-button").disabled);
+  stoppingPython = true;
   await page.locator("#stop-button").click();
   await page.waitForFunction(() => document.querySelector("#stop-button").disabled, undefined, { timeout: 15000 });
   assert.match(await page.locator("#error-text").innerText(), /KeyboardInterrupt|تم إيقاف|Execution interrupted/i);
@@ -85,7 +94,11 @@ try {
   await page.locator("#mobile-scrim").click();
   assert.equal(await page.locator("#file-sidebar").evaluate((element) => element.classList.contains("open")), false);
 
-  assert.deepEqual(pageErrors, [], "The browser page should not throw uncaught JavaScript errors.");
+  assert.deepEqual(pageErrors, [], "The browser page should not throw unexpected JavaScript errors.");
+  assert.ok(
+    interruptPageErrors.every((message) => message.includes("KeyboardInterrupt")),
+    "Only the expected Python KeyboardInterrupt may surface while cancelling a running program.",
+  );
   console.log("Browser smoke passed: Pyodide startup, Python output, IndexedDB restore, input(), SyntaxError, Stop and mobile sidebar.");
   await context.close();
 } finally {
