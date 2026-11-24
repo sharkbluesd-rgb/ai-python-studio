@@ -45,3 +45,10 @@ test("project storage normalizes and keeps explicit empty folders", () => {
   const result = validateProjectTree({ "main.py": "print(1)" }, ["assets", "assets/images"]);
   assert.deepEqual(result.folders.sort(), ["assets", "assets/images"]);
 });
+
+test("common Python project configuration dotfiles are accepted", () => {
+  for (const path of [".gitignore", ".dockerignore", ".editorconfig", ".python-version", "Dockerfile", "Makefile", "Pipfile"]) {
+    assert.equal(validateTextFile(path, "text"), path);
+  }
+  assert.throws(() => validateTextFile(".env", "SECRET=value"), /غير مدعوم/);
+});
