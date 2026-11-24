@@ -38,6 +38,9 @@ jobs:
       - name: Install web IDE dependencies
         working-directory: web-ide
         run: npm install --no-audit --no-fund
+      - name: Audit browser dependencies
+        working-directory: web-ide
+        run: npm audit --audit-level=high
       - name: Test browser storage and path validation
         working-directory: web-ide
         run: npm test
