@@ -1,59 +1,56 @@
 # Flet APK Studio 2.0
 
-**Flet APK Studio** is a focused mobile-first tool for turning an existing Python/Flet project into an Android APK. It is not a Python IDE and does not contain a code editor.
+**Flet APK Studio** is a web-first tool for turning Python/Flet projects into Android APKs. It is not a Python IDE and does not include a code editor.
 
-## Build flow
+## Browser workflow
 
-1. Create the included Flet Android starter or import a project ZIP from your device.
-2. Set the Android app name, package ID, version and build number.
-3. Connect a GitHub account using OAuth Device Flow.
-4. Select an existing repository or create a new private repository.
-5. Upload the project, dispatch \`.github/workflows/build-apk.yml\`, and follow the GitHub Actions run.
-6. Download the APK only after the selected run completes successfully.
+1. Open the deployed FastAPI web service on a phone or computer.
+2. Import a Flet project ZIP or create the included Android starter.
+3. Set the Android app name, package ID, version and build number.
+4. Connect GitHub using OAuth Device Flow.
+5. Choose an existing repository or create a private repository.
+6. Upload the project, dispatch GitHub Actions, monitor the build and download the verified APK.
 
-The actual APK is built by GitHub Actions using the official Flet build action. The phone does not need the Android SDK or Gradle installed.
+The browser does not need Android SDK or Gradle. APK builds run in GitHub Actions.
 
-## Required project structure
+## Web service
 
-An imported project must include:
+FastAPI serves the browser interface and /api/* endpoints from the same origin. Run locally:
 
-- \`pyproject.toml\` with \`[project]\`, \`[tool.flet]\` and \`[tool.flet.app]\`.
-- \`src/main.py\` as the Flet application entry point.
-- \`.github/workflows/build-apk.yml\` with \`workflow_dispatch\`, APK build and artifact upload.
+```bash
+python -m pip install -r requirements.txt
+COOKIE_SECURE=false PYTHONPATH=src uvicorn web_api:app --app-dir src --host 127.0.0.1 --port 8000
+```
 
-Use the in-app **Flet Android App** starter to create a project with this structure. Python dependencies must support the Python/Android ABI selected by the build workflow. A package that installs on desktop or Termux is not automatically compatible with Android.
+Open http://127.0.0.1:8000. Production must use HTTPS and a stable random FLET_APK_STUDIO_SESSION_SECRET.
 
-## GitHub setup
+A Render blueprint is included in render.yaml. Connect the repository to Render and deploy branch feature/studio-2.0. The blueprint creates a single-worker web service and generates the session secret.
 
-1. Create a GitHub OAuth App and enable Device Flow.
-2. Enter its Client ID in the app. Never enter a password, Client Secret or personal access token.
-3. Approve the displayed device code at GitHub, then verify the connection in the app.
-4. Select/create a repository and start the build.
+## Security and current deployment limits
 
-GitHub authorization requests \`repo\` and \`workflow\` scopes. These are broad permissions. The OAuth token is held in memory only and is cleared when disconnected or the app process ends. Review your project and every GitHub Actions workflow before uploading/building. Do not include \`.env\` files, passwords, API keys, signing keys or other secrets in the project.
+- GitHub OAuth Device Flow is handled by FastAPI. The access token stays in server memory and is never sent to browser JavaScript or written to disk.
+- The browser receives a signed HttpOnly session cookie and a separate CSRF token.
+- ZIP uploads are size-limited and extracted by the guarded WorkspaceStore. The upload-to-GitHub path also rejects common secret patterns and unsafe archive entries.
+- The first web release uses in-memory sessions and temporary project files. It must run as one instance and one worker. Restarting or redeploying clears active sessions and temporary projects.
+- Do not scale to multiple instances or workers until sessions, jobs and project state move to shared storage.
+- GitHub OAuth requests repo and workflow scopes. These are broad permissions; review the approval screen and every workflow before authorizing a repository.
+- Imported projects must contain pyproject.toml and src/main.py. If the build workflow is missing, the service adds the trusted Flet APK workflow. Existing workflows are not overwritten.
+- Never upload .env files, passwords, API keys, signing keys or other secrets.
 
-## Development and tests
+## Tests
 
 Python 3.10+ is required.
 
-\`\`\`bash
-python -m pip install -e .
+```bash
+python -m pip install -r requirements.txt
+python -m pip install -e . --no-deps
 PYTHONPATH=src python -m unittest discover -s tests -v
 python -m compileall -q src tests tools
-flet run
-\`\`\`
+ruff check src tests --select E4,E7,E9,F
+bandit -q -r src -lll
+pip-audit -r requirements.txt
+```
 
-The project pins \`flet==1.1.2\`. The former \`flet-code-editor\` dependency and editor screens have been removed.
+## APK verification
 
-## Web preview
-
-The GitHub Pages root is a responsive **UI preview** of the APK builder. It can display a selected ZIP filename and demonstrate the layout, but it does not upload files, connect to GitHub or build/download an APK. Real build operations are available in the Flet application after GitHub is connected.
-
-Preview: https://sharkbluesd-rgb.github.io/ai-python-studio/
-
-## Limitations
-
-- Builds run on GitHub Actions, not locally on the phone.
-- Build time and availability depend on GitHub Actions quotas and the project's dependencies.
-- APK download requires a successful Actions run and an artifact containing one APK.
-- Successful cloud build does not replace installation and launch testing on a physical Android device.
+A successful Actions run and verified APK archive are necessary but not sufficient for release. Install and launch the APK on a trusted physical Android device before distributing it.
