@@ -19,7 +19,7 @@ import "./style.css";
 const $ = (id) => document.getElementById(id);
 const state = {
   project: null, currentPath: "main.py", openTabs: [], saveTimer: null,
-  lightTheme: false, virtualCtrl: false, virtualShift: false, collapsedFolders: new Set(),
+  lightTheme: true, virtualCtrl: false, virtualShift: false, collapsedFolders: new Set(),
   isRunning: false, activePanel: "output", runSequence: 0, runtimeReady: false,
 };
 const themeCompartment = new Compartment();
@@ -204,6 +204,7 @@ function updateCursor() {
   $("cursor-position").textContent = "Ln " + line.number + ", Col " + (position - line.from + 1);
 }
 function setupEditor() {
+  document.body.classList.add("light");
   const lightTheme = EditorView.theme({
     "&": { backgroundColor: "#f6f7fb", color: "#1c2433" },
     ".cm-content": { caretColor: "#6554dc" },
