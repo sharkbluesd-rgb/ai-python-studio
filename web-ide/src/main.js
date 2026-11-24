@@ -575,14 +575,42 @@ function handleRuntimeMessage(message) {
   } else if (message.type === "packages") {
     renderPackages(message.packages || []);
   } else if (message.type === "runtime-error" || message.type === "init-failed") {
-    $("runtime-state").classList.remove("ready");
+    state.runtimeReady = false;
+    $("runtime-state").classList.remove("ready", "busy");
+    $("runtime-state").classList.add("error");
     $("runtime-state").querySelector("span").textContent = "خطأ في Python";
+    setRunning(false);
+    $("stdin-form").classList.add("hidden");
     addRuntimeError(message.message || "خطأ في بيئة التشغيل.");
   } else if (message.type === "worker-terminated") {
     $("run-duration").textContent = "تم الإيقاف";
     setRunning(false);
     $("stdin-form").classList.add("hidden");
     setStatus(message.text);
+  }
+}
+async function restartPythonRuntime() {
+  if (state.isRunning && !confirm("إعادة التشغيل ستوقف البرنامج الجاري وتعيد تحميل بيئة Python. متابعة؟")) return;
+  const button = $("restart-runtime");
+  button.disabled = true;
+  state.runtimeReady = false;
+  $("runtime-state").classList.remove("ready", "error", "busy");
+  $("runtime-state").querySelector("span").textContent = "إعادة تشغيل Python…";
+  try {
+    const result = await runtime.restart();
+    state.runtimeReady = true;
+    $("python-version").textContent = "Python " + result.version;
+    $("output-text").textContent = "تمت إعادة تشغيل بيئة Python بنجاح.\n";
+    setStatus("بيئة Python جاهزة من جديد");
+    toast("تمت إعادة تشغيل بيئة Python.", "success");
+  } catch (error) {
+    state.runtimeReady = false;
+    $("runtime-state").classList.add("error");
+    $("runtime-state").querySelector("span").textContent = "تعذر تحميل Python";
+    $("python-version").textContent = "Python غير متاح";
+    toast(error.message, "error");
+  } finally {
+    button.disabled = false;
   }
 }
 function renderPackages(packages) {
@@ -752,6 +780,7 @@ function bindEvents() {
   $("zip-picker").addEventListener("change", (event) => importZip(event.target.files[0]).catch((error) => toast(error.message, "error")).finally(() => { event.target.value = ""; }));
   $("export-zip").addEventListener("click", () => exportZip());
   $("save-button").addEventListener("click", () => saveNow().catch(() => {}));
+  $("restart-runtime").addEventListener("click", () => restartPythonRuntime());
   $("run-button").addEventListener("click", () => runCurrentFile().catch((error) => toast(error.message, "error")));
   $("stop-button").addEventListener("click", () => runtime.stop());
   $("search-button").addEventListener("click", () => openSearchPanel(editorView));
