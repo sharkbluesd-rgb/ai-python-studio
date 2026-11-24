@@ -207,7 +207,11 @@ $("build-btn").addEventListener("click", async () => {
 async function refreshBuild() {
   try {
     const result = await api("/api/build/status");
-    if (!result.found) { announce(result.message); return; }
+    if (!result.found) {
+      announce(result.message);
+      if (!state.pollTimer) state.pollTimer = setInterval(refreshBuild, 8000);
+      return;
+    }
     const summary = (result.jobs || []).map(job => {
       const steps = (job.steps || []).map(step => step.name + ": " + (step.conclusion || step.status)).join(" · ");
       return job.name + ": " + (job.conclusion || job.status) + (steps ? "\n" + steps : "");
