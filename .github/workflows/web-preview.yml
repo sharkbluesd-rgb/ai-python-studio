@@ -1,79 +1,106 @@
-name: Build and deploy Flet APK Studio Web Preview
+name: Build and deploy Python Studio Mobile Web IDE
 
 on:
   push:
     branches:
       - feature/studio-2.0
     paths:
-      - "src/web_api.py"
-      - "src/flet_project.py"
-      - "src/github_cloud.py"
-      - "src/workspace.py"
-      - "src/templates.py"
+      - "web-ide/**"
+      - "tests/**"
+      - "src/**"
       - "requirements.txt"
       - "pyproject.toml"
-      - "render.yaml"
-      - "tools/build_static_web_preview.py"
-      - "web-preview-static/**"
-      - "tests/**"
-      - "WEB_ARCHITECTURE.md"
+      - "tools/**"
       - ".github/workflows/web-preview.yml"
   workflow_dispatch:
 
 concurrency:
-  group: pages-flet-apk-studio
+  group: pages-python-studio-mobile
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  test:
-    name: Test web API and prepare static assets
+  build:
+    name: Test and build browser IDE
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      pages: write
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22.16.0"
+          cache: npm
+          cache-dependency-path: web-ide/package.json
+      - name: Install web IDE dependencies
+        working-directory: web-ide
+        run: npm install --no-audit --no-fund
+      - name: Test browser storage and path validation
+        working-directory: web-ide
+        run: npm test
+      - name: Build browser IDE and local Pyodide runtime
+        working-directory: web-ide
+        env:
+          GITHUB_PAGES: "true"
+        run: npm run build
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
-      - name: Install web service and quality tools
+      - name: Install Python quality tools
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
           python -m pip install -e . --no-deps
           python -m pip install ruff bandit pip-audit
-      - name: Compile source
+      - name: Compile Python source
         run: python -m compileall -q src tests tools
-      - name: Run unit tests
+      - name: Run Python regression tests
         env:
           PYTHONPATH: src
         run: python -m unittest discover -s tests -v
-      - name: Lint and audit
+      - name: Lint and audit Python dependencies
         run: |
           ruff check src tests --select E4,E7,E9,F
           bandit -q -r src -lll
           pip-audit -r requirements.txt
-      - name: Verify web assets
+      - name: Verify deployable web IDE
         run: |
-          python tools/build_static_web_preview.py --output build/web
-          test -s build/web/index.html
-          test -s build/web/style.css
-          test -s build/web/app.js
+          test -s web-ide/dist/index.html
+          test -s web-ide/dist/pyodide/pyodide.js
+          test -s web-ide/dist/pyodide/pyodide.asm.wasm
+          test -s web-ide/dist/pyodide/pyodide-lock.json
+          test -s web-ide/dist/sw.js
           python - <<'PY'
           from pathlib import Path
-          html = Path("build/web/index.html").read_text(encoding="utf-8")
-          script = Path("build/web/app.js").read_text(encoding="utf-8")
-          assert "Flet APK Studio" in html
-          assert "/api/build/start" in script
-          assert "/api/build/download" in script
-          print("Verified the web frontend is wired to the FastAPI routes.")
+          html = Path("web-ide/dist/index.html").read_text(encoding="utf-8")
+          assets = list(Path("web-ide/dist/assets").glob("*.js"))
+          script = "\\n".join(path.read_text(encoding="utf-8") for path in assets)
+          assert "PYTHON STUDIO MOBILE" in html
+          assert "PyodideRuntimeAdapter" in script
+          assert "runPythonAsync" in script
+          assert "indexedDB" in script
+          print("Verified the bundled browser IDE and Pyodide worker.")
           PY
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-pages-artifact@v4
         with:
-          name: flet-apk-studio-web
-          path: build/web
-          if-no-files-found: error
-          retention-days: 14
+          path: web-ide/dist
+
+  deploy:
+    name: Publish browser IDE to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/feature/studio-2.0'
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy web IDE
+        id: deployment
+        uses: actions/deploy-pages@v4
