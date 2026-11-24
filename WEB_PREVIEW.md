@@ -1,11 +1,9 @@
-# Flet APK Studio — Web Preview
+# Flet APK Studio — Web deployment
 
-The GitHub Pages root is a static, responsive preview of the dedicated APK-builder interface:
+The browser application is served by the FastAPI service, not by GitHub Pages. The backend serves the HTML, CSS, JavaScript and authenticated /api/* routes from the same origin.
 
-https://sharkbluesd-rgb.github.io/ai-python-studio/
+Deployment instructions and the Render blueprint are documented in README.md and WEB_ARCHITECTURE.md.
 
-It demonstrates the mobile layout, project ZIP selection, Android metadata fields, GitHub connection section and APK build stages.
+The old GitHub Pages URL is a historical static preview. It is not the live application and does not provide upload, GitHub authentication, cloud builds or APK downloads.
 
-**It is a design preview only.** It does not upload the selected ZIP, perform GitHub OAuth, run GitHub Actions or produce an APK. Those actions require the Flet application, a GitHub OAuth App with Device Flow enabled, and repository permissions.
-
-The former isolated CodeEditor browser application has been removed along with its dependency. The full Flet APK builder is validated separately through the Python startup/unit tests and Android build workflow. Browser preview validation must not be described as a successful APK build.
+The first web deployment uses in-memory sessions and temporary files on a single worker. Restarts clear active sessions and projects. Multi-instance scaling requires shared session and job storage first.
