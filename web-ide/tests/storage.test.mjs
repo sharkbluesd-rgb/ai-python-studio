@@ -32,8 +32,8 @@ test("project storage enforces total-size and file/folder collision limits", () 
   );
   assert.throws(() => validateProjectTree(oversizedProject), /12 MB/);
   assert.throws(() => validateProjectTree({
-    "src": "a file",
-    "src/main.py": "print(1)",
+    "src.txt": "a file",
+    "src.txt/main.py": "print(1)",
   }), /تعارض/);
   assert.throws(() => validateProjectTree({
     "src/main.py": "print(1)",
